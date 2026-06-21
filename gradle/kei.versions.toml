@@ -1,5 +1,6 @@
 [versions]
-# Used in [/gradle/build-config/src/main/kotlin/PluginKotlinMultiplatform.kt]
+# android-sdk-* used in [gradle/build-logic/src/main/kotlin/PluginAndroidBase.kt];
+# java used in [gradle/build-logic/src/main/kotlin/keiyoushi/gradle/configurations/Kotlin.kt]
 android-sdk-min = "21"
 android-sdk-compile = "34"
 android-sdk-target = "34"
