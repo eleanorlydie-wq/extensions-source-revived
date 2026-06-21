@@ -11,10 +11,8 @@ import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.Filter.CheckBox
-import eu.kanade.tachiyomi.source.model.Filter.Group
 import eu.kanade.tachiyomi.source.model.Filter.Select
 import eu.kanade.tachiyomi.source.model.Filter.Text
-import eu.kanade.tachiyomi.source.model.Filter.TriState
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
@@ -109,27 +107,32 @@ abstract class EHentai(
         ),
     )
 
-    override fun fetchPageList(chapter: SChapter) = fetchChapterPage(chapter, "$baseUrl/${chapter.url}").map {
-        it.mapIndexed { i, s ->
-            Page(i, s)
-        }
-    }!!
-
-    /**
-     * Recursively fetch chapter pages
-     */
-    private fun fetchChapterPage(
-        chapter: SChapter,
-        np: String,
-        pastUrls: List<String> = emptyList(),
-    ): Observable<List<String>> {
-        val urls = ArrayList(pastUrls)
-        return chapterPageCall(np).flatMap {
-            val jsoup = it.asJsoup()
-            urls += parseChapterPage(jsoup)
-            nextPageUrl(jsoup)?.let { string ->
-                fetchChapterPage(chapter, string, urls)
-            } ?: Observable.just(urls)
+    override fun fetchPageList(chapter: SChapter): Observable<List<Page>> {
+        val baseChapterUrl = "$baseUrl/${chapter.url}"
+        return chapterPageCall(baseChapterUrl).flatMap { response ->
+            val doc = response.asJsoup()
+            val firstImages = parseChapterPage(doc)
+            val maxPageIndex = maxChapterPageIndex(doc)
+            if (maxPageIndex == 0) {
+                Observable.just(firstImages)
+            } else {
+                Observable
+                    .from((1..maxPageIndex).toList())
+                    .flatMap(
+                        { p ->
+                            chapterPageCall(addParam(baseChapterUrl, "p", p.toString()))
+                                .map { p to parseChapterPage(it.asJsoup()) }
+                        },
+                        PAGE_FETCH_CONCURRENCY,
+                    ).toList()
+                    .map { partials ->
+                        firstImages + partials.sortedBy { it.first }.flatMap { it.second }
+                    }
+            }
+        }.map {
+            it.mapIndexed { i, s ->
+                Page(i, s)
+            }
         }
     }
 
@@ -141,13 +144,19 @@ abstract class EHentai(
             .map { it.second }
     }
 
+    /**
+     * Determine the highest 0-based thumbnail-page index from the gallery pagination table.
+     */
+    private fun maxChapterPageIndex(element: Element): Int = (
+        element
+            .select(".ptt td a")
+            .mapNotNull { it.text().trim().toIntOrNull() }
+            .maxOrNull() ?: 1
+        ) - 1
+
     private fun chapterPageCall(np: String) = client.newCall(chapterPageRequest(np)).asObservableSuccess()
 
     private fun chapterPageRequest(np: String) = exGet(np, null, headers)
-
-    private fun nextPageUrl(element: Element) = element.select("a[onclick=return false]").last()?.let {
-        if (it.text() == ">") it.attr("href") else null
-    }
 
     private fun languageTag(enforceLanguageFilter: Boolean = false): String = if (enforceLanguageFilter || getEnforceLanguagePref()) "language:$ehLang" else ""
 
@@ -170,10 +179,20 @@ abstract class EHentai(
                 query.isBlank() -> languageTag(enforceLanguageFilter)
                 else -> languageTag(enforceLanguageFilter).let { if (it.isNotEmpty()) "$query,$it" else query }
             }
-        modifiedQuery +=
+        val typedTags =
             filters
-                .filterIsInstance<TagFilter>()
-                .flatMap { it.markedTags() }
+                .filterIsInstance<TagAutoCompleteFilter>()
+                .firstOrNull()
+                ?.state
+                .orEmpty()
+                .split(',', ';')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+        // Remember how often each tag is searched so frequent ones are proposed first next time.
+        recordTagUsage(typedTags)
+        modifiedQuery +=
+            typedTags
                 .joinToString(",")
                 .let { if (it.isNotEmpty()) ",$it" else it }
         uri.appendQueryParameter("f_search", modifiedQuery)
@@ -453,10 +472,22 @@ abstract class EHentai(
         EnforceLanguageFilter(getEnforceLanguagePref()),
         Watched(),
         GenreGroup(),
-        TagFilter("Misc Tags", triStateBoxesFrom(miscTags), "other"),
-        TagFilter("Female Tags", triStateBoxesFrom(femaleTags), "female"),
-        TagFilter("Male Tags", triStateBoxesFrom(maleTags), "male"),
+        Filter.Header("Tags — separate with , or ;  ·  prefix - to exclude"),
+        Filter.Header("Examples: female:big breasts · parody:naruto · artist:rei · -guro"),
+        TagAutoCompleteFilter(orderedTagSuggestions()),
         AdvancedGroup(),
+    )
+
+    // Most-used tags (by this user, on this source) first, then the full dictionary, de-duplicated.
+    // This surfaces the tags the user searches most often at the top of the autocomplete dropdown.
+    private fun orderedTagSuggestions(): List<String> = (mostUsedTags() + EH_TAG_SUGGESTIONS).distinct()
+
+    class TagAutoCompleteFilter(
+        suggestions: List<String>,
+    ) : Filter.AutoComplete(
+        name = "Tags",
+        hint = "e.g. female:big breasts, parody:naruto; -guro",
+        suggestions = suggestions,
     )
 
     class Watched :
@@ -572,24 +603,6 @@ abstract class EHentai(
         default: Boolean,
     ) : CheckBox("Enforce language", default)
 
-    private val miscTags = "3d, already uploaded, anaglyph, animal on animal, animated, anthology, arisa mizuhara, artbook, ashiya noriko, bailey jay, body swap, caption, chouzuki maryou, christian godard, comic, compilation, dakimakura, fe galvao, ffm threesome, figure, forbidden content, full censorship, full color, game sprite, goudoushi, group, gunyou mikan, harada shigemitsu, hardcore, helly von valentine, higurashi rin, hololive, honey select, how to, incest, incomplete, ishiba yoshikazu, jessica nigri, kalinka fox, kanda midori, kira kira, kitami eri, kuroi hiroki, lenfried, lincy leaw, marie claude bourbonnais, matsunaga ayaka, me me me, missing cover, mmf threesome, mmt threesome, mosaic censorship, mtf threesome, multi-work series, no penetration, non-nude, novel, nudity only, oakazaki joe, out of order, paperchild, pm02 colon 20, poor grammar, radio comix, realporn, redraw, replaced, sakaki kasa, sample, saotome love, scanmark, screenshots, sinful goddesses, sketch lines, stereoscopic, story arc, takeuti ken, tankoubon, themeless, tikuma jukou, time stop, tsubaki zakuro, ttm threesome, twins, uncensored, vandych alex, variant set, watermarked, webtoon, western cg, western imageset, western non-h, yamato nadeshiko club, yui okada, yukkuri, zappa go"
-    private val femaleTags = "ahegao, anal, angel, apron, bandages, bbw, bdsm, beauty mark, big areolae, big ass, big breasts, big clit, big lips, big nipples, bikini, blackmail, bloomers, blowjob, bodysuit, bondage, breast expansion, bukkake, bunny girl, business suit, catgirl, centaur, cheating, chinese dress, christmas, collar, corset, cosplaying, cowgirl, crossdressing, cunnilingus, dark skin, daughter, deepthroat, defloration, demon girl, double penetration, dougi, dragon, drunk, elf, exhibitionism, farting, females only, femdom, filming, fingering, fishnets, footjob, fox girl, furry, futanari, garter belt, ghost, giantess, glasses, gloves, goblin, gothic lolita, growth, guro, gyaru, hair buns, hairy, hairy armpits, handjob, harem, hidden sex, horns, huge breasts, humiliation, impregnation, incest, inverted nipples, kemonomimi, kimono, kissing, lactation, latex, leg lock, leotard, lingerie, lizard girl, maid, masked face, masturbation, midget, miko, milf, mind break, mind control, monster girl, mother, muscle, nakadashi, netorare, nose hook, nun, nurse, oil, paizuri, panda girl, pantyhose, piercing, pixie cut, policewoman, ponytail, pregnant, rape, rimjob, robot, scat, schoolgirl uniform, sex toys, shemale, sister, small breasts, smell, sole dickgirl, sole female, squirting, stockings, sundress, sweating, swimsuit, swinging, tail, tall girl, teacher, tentacles, thigh high boots, tomboy, transformation, twins, twintails, unusual pupils, urination, vore, vtuber, widow, wings, witch, wolf girl, x-ray, yuri, zombie"
-    private val maleTags = "anal, bbm, big ass, big penis, bikini, blood, blowjob, bondage, catboy, cheating, chikan, condom, crab, crossdressing, dark skin, deepthroat, demon, dickgirl on male, dilf, dog boy, double anal, double penetration, dragon, drunk, exhibitionism, facial hair, feminization, footjob, fox boy, furry, glasses, group, guro, hairy, handjob, hidden sex, horns, huge penis, human on furry, kimono, lingerie, lizard guy, machine, maid, males only, masturbation, mmm threesome, monster, muscle, nakadashi, ninja, octopus, oni, pillory, policeman, possession, prostate massage, public use, schoolboy uniform, schoolgirl uniform, sex toys, shotacon, sleeping, snuff, sole male, stockings, sunglasses, swimsuit, tall man, tentacles, tomgirl, unusual pupils, virginity, waiter, x-ray, yaoi, zombie"
-
-    private fun triStateBoxesFrom(tagString: String): List<TagTriState> = tagString.split(", ").map { TagTriState(it) }
-
-    class TagTriState(
-        tag: String,
-    ) : TriState(tag)
-
-    class TagFilter(
-        name: String,
-        private val triStateBoxes: List<TagTriState>,
-        private val nameSpace: String,
-    ) : Group<TagTriState>(name, triStateBoxes) {
-        fun markedTags() = triStateBoxes.filter { it.isIncluded() }.map { "$nameSpace:${it.name}" } + triStateBoxes.filter { it.isExcluded() }.map { "-$nameSpace:${it.name}" }
-    }
-
     // map languages to their internal ids
     private val languageMappings =
         listOf(
@@ -617,11 +630,20 @@ abstract class EHentai(
         const val PREFIX_ID_SEARCH = "id:"
         const val TR_SUFFIX = "TR"
 
+        // Number of thumbnail pages to fetch concurrently when building the page list
+        const val PAGE_FETCH_CONCURRENCY = 5
+
         // Preferences vals
         private const val ENFORCE_LANGUAGE_PREF_KEY = "ENFORCE_LANGUAGE"
         private const val ENFORCE_LANGUAGE_PREF_TITLE = "Enforce Language"
         private const val ENFORCE_LANGUAGE_PREF_SUMMARY = "If checked, forces browsing of manga matching a language tag"
         private const val ENFORCE_LANGUAGE_PREF_DEFAULT_VALUE = false
+
+        // Personalized tag-frequency tracking
+        private const val TAG_USAGE_PREF_KEY = "TAG_USAGE"
+
+        // Cap stored tags so the preference can't grow without bound; keep the most-used ones.
+        private const val TAG_USAGE_MAX_ENTRIES = 300
     }
 
     // Preferences
@@ -643,4 +665,49 @@ abstract class EHentai(
     }
 
     private fun getEnforceLanguagePref(): Boolean = preferences.getBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", ENFORCE_LANGUAGE_PREF_DEFAULT_VALUE)
+
+    // region Personalized tag frequency
+    // Usage is stored per source as newline-separated "tag\tcount" lines (tags never contain \t or \n).
+
+    private fun usagePrefKey() = "${TAG_USAGE_PREF_KEY}_$lang"
+
+    private fun getTagUsage(): Map<String, Int> = preferences
+        .getString(usagePrefKey(), "")
+        .orEmpty()
+        .lineSequence()
+        .filter { it.isNotBlank() }
+        .mapNotNull { line ->
+            val sep = line.lastIndexOf('\t')
+            if (sep <= 0) {
+                return@mapNotNull null
+            }
+            val tag = line.substring(0, sep)
+            val count = line.substring(sep + 1).toIntOrNull() ?: return@mapNotNull null
+            tag to count
+        }
+        .toMap()
+
+    private fun recordTagUsage(tags: List<String>) {
+        // Normalize to the bare include form (drop a leading '-', lowercase) so an excluded tag
+        // still counts toward familiarity and "female:X" / "-female:X" share a tally.
+        val normalized = tags
+            .map { it.removePrefix("-").trim().lowercase() }
+            .filter { it.isNotEmpty() }
+        if (normalized.isEmpty()) {
+            return
+        }
+        val usage = getTagUsage().toMutableMap()
+        normalized.forEach { usage[it] = (usage[it] ?: 0) + 1 }
+        val encoded = usage.entries
+            .sortedByDescending { it.value }
+            .take(TAG_USAGE_MAX_ENTRIES)
+            .joinToString("\n") { "${it.key}\t${it.value}" }
+        preferences.edit().putString(usagePrefKey(), encoded).apply()
+    }
+
+    private fun mostUsedTags(): List<String> = getTagUsage()
+        .entries
+        .sortedByDescending { it.value }
+        .map { it.key }
+    // endregion
 }

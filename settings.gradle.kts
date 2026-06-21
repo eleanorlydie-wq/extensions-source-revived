@@ -20,6 +20,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     @Suppress("UnstableApiUsage")
     repositories {
+        // Resolve the locally-published forked extensions-lib (run `publishToMavenLocal`
+        // in the extensions-lib fork) before the remote repos.
+        mavenLocal()
         google()
         mavenCentral()
         maven(url = "https://www.jitpack.io")
