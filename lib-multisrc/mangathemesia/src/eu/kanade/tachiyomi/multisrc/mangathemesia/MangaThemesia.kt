@@ -292,25 +292,13 @@ abstract class MangaThemesia(
     open fun String?.parseStatus(): Int = when {
         this == null -> SManga.UNKNOWN
 
-        listOf(
-            "مستمرة", "en curso", "ongoing", "on going", "ativo", "en cours", "en cours de publication",
-            "đang tiến hành", "em lançamento", "онгоінг", "publishing", "devam ediyor", "em andamento",
-            "in corso", "güncel", "berjalan", "продолжается", "updating", "lançando", "in arrivo",
-            "emision", "en emision", "مستمر", "curso", "en marcha", "publicandose", "publicando",
-            "连载中", "devam etmekte", "連載中",
-        ).any { this.contains(it, ignoreCase = true) } -> SManga.ONGOING
+        ONGOING_STATUS_WORDS.any { this.contains(it, ignoreCase = true) } -> SManga.ONGOING
 
-        listOf(
-            "completed", "completo", "complété", "fini", "achevé", "terminé", "tamamlandı", "đã hoàn thành",
-            "hoàn thành", "مكتملة", "завершено", "finished", "finalizado", "completata", "one-shot",
-            "bitti", "tamat", "completado", "concluído", "完結", "concluido", "已完结", "bitmiş",
-        ).any { this.contains(it, ignoreCase = true) } -> SManga.COMPLETED
+        COMPLETED_STATUS_WORDS.any { this.contains(it, ignoreCase = true) } -> SManga.COMPLETED
 
-        listOf("canceled", "cancelled", "cancelado", "cancellato", "cancelados", "dropped", "discontinued", "abandonné")
-            .any { this.contains(it, ignoreCase = true) } -> SManga.CANCELLED
+        CANCELLED_STATUS_WORDS.any { this.contains(it, ignoreCase = true) } -> SManga.CANCELLED
 
-        listOf("hiatus", "on hold", "pausado", "en espera", "en pause", "en attente", "hiato")
-            .any { this.contains(it, ignoreCase = true) } -> SManga.ON_HIATUS
+        HIATUS_STATUS_WORDS.any { this.contains(it, ignoreCase = true) } -> SManga.ON_HIATUS
 
         else -> SManga.UNKNOWN
     }
@@ -640,6 +628,24 @@ abstract class MangaThemesia(
 
     companion object {
         const val URL_SEARCH_PREFIX = "url:"
+
+        // Hoisted out of String?.parseStatus(), called once per manga-details parse.
+        private val ONGOING_STATUS_WORDS = listOf(
+            "مستمرة", "en curso", "ongoing", "on going", "ativo", "en cours", "en cours de publication",
+            "đang tiến hành", "em lançamento", "онгоінг", "publishing", "devam ediyor", "em andamento",
+            "in corso", "güncel", "berjalan", "продолжается", "updating", "lançando", "in arrivo",
+            "emision", "en emision", "مستمر", "curso", "en marcha", "publicandose", "publicando",
+            "连载中", "devam etmekte", "連載中",
+        )
+        private val COMPLETED_STATUS_WORDS = listOf(
+            "completed", "completo", "complété", "fini", "achevé", "terminé", "tamamlandı", "đã hoàn thành",
+            "hoàn thành", "مكتملة", "завершено", "finished", "finalizado", "completata", "one-shot",
+            "bitti", "tamat", "completado", "concluído", "完結", "concluido", "已完结", "bitmiş",
+        )
+        private val CANCELLED_STATUS_WORDS =
+            listOf("canceled", "cancelled", "cancelado", "cancellato", "cancelados", "dropped", "discontinued", "abandonné")
+        private val HIATUS_STATUS_WORDS =
+            listOf("hiatus", "on hold", "pausado", "en espera", "en pause", "en attente", "hiato")
 
         // More info: https://issuetracker.google.com/issues/36970498
         private val MANGA_PAGE_ID_REGEX = "post_id\\s*:\\s*(\\d+)\\}".toRegex()
