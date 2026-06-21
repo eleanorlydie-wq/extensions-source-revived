@@ -230,10 +230,11 @@ one atomic `perf(...)` commit per module. All 7 modules verified:
 
 ## Phase 4 — Verification, summary & handoff
 
-**Final gate: ✅ `./gradlew --no-build-cache --no-configuration-cache spotlessCheck` →
-BUILD SUCCESSFUL.** Plus: all 7 touched shared-code modules `compileReleaseKotlin` ✅,
-`:build-logic` compiles ✅, library AAR builds ✅. Extension **APKs** can't be built on
-this aarch64 box (aapt2) — they build/verify on x86_64 CI at merge time.
+**Final gate: ✅ `./gradlew spotlessCheck` → BUILD SUCCESSFUL** (after the post-merge
+spotless-serialization hotfix; verified green both fresh, 2m6s, and on cache restore,
+41s). Plus: all 7 touched shared-code modules `compileReleaseKotlin` ✅, `:build-logic`
+compiles ✅, library AAR builds ✅. Extension **APKs** can't be built on this aarch64 box
+(aapt2) — they build/verify on x86_64 CI at merge time.
 
 ### Baseline vs after
 | Item | Before | After |
@@ -275,7 +276,18 @@ stays pinned at 1.7.3 by design.
   consolidating duplicated date-parse helpers into one shared `lib/` helper.
 - **A8:** root `buildscript {}` classpath may be redundant — unverifiable locally.
 - **Dep minors** (okhttp/spotless/coroutines) — available if you want them.
-- **Pre-existing spotless/build-cache flakiness (NOT mine, NOT A6):** a full-tree
+- **RESOLVED — spotless concurrency race (post-merge hotfix):** the first full-rebuild
+  CI run after merge failed on `:src:…:spotlessXml`/`spotlessJava` with `Could not read
+  path .../build/spotless-{clean,lints}/spotless<Format>` on random untouched modules.
+  Root cause: spotless 8.x lets a project's per-format tasks run concurrently and they
+  race on the shared `build/spotless-clean` dir. Latent (masked while spotless tasks were
+  cache hits); the pass's `.editorconfig`/`PluginSpotless` edits invalidated all spotless
+  caches → every task executed at once → race fired. **Fix:** `fix(build-logic): serialize
+  spotless tasks…` registers a `maxParallelUsages=1` shared build service used by all
+  spotless tasks. Verified green fresh (2m6s) and on cache restore (41s). Also reverted
+  A6 (parallel config cache) precautionarily (innocent — race reproduces without it).
+  _The original "build-cache" wording below was the first hypothesis; superseded._
+- **Superseded note — initial spotless/build-cache hypothesis (NOT mine, NOT A6):** a full-tree
   `spotlessCheck` fails non-deterministically with `Could not read path
   build/spotless-{lints,clean}/spotless<Format>` on a *different, untouched* module each
   run (coffeemanga, heytoon, magusmanga, toomics…) — never a format violation. Root
