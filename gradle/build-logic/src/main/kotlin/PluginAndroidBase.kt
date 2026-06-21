@@ -33,7 +33,7 @@ class PluginAndroidBase : Plugin<Project> {
             }
         }
 
-        tasks.getByName("preBuild").dependsOn(spotlessTaskName())
+        tasks.named("preBuild") { dependsOn(spotlessTaskName()) }
     }
 }
 
