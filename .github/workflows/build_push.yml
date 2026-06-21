@@ -89,8 +89,10 @@ jobs:
           cache-read-only: ${{ matrix.chunk.number > 1 }}
 
       - name: Prepare signing key
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
-          echo ${{ secrets.SIGNING_KEY }} | base64 -d > signingkey.jks
+          printf '%s' "$SIGNING_KEY" | base64 -d > signingkey.jks
 
       - name: Build extensions (${{ matrix.chunk.number }})
         env:
@@ -133,7 +135,9 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          ref: main
+          # Pin to the exact commit that produced the built APKs, so a push that
+          # lands during the build can't make publish use newer packaging scripts.
+          ref: ${{ github.sha }}
           path: main
           persist-credentials: false
 
@@ -141,7 +145,7 @@ jobs:
         run: |
           cd main
           python ./.github/scripts/move-built-apks.py
-          INSPECTOR_LINK="$(curl -s "https://api.github.com/repos/eleanorlydie-wq/extensions-inspector/releases/latest" | jq -r '.assets[0].browser_download_url')"
+          INSPECTOR_LINK="$(curl -s "https://api.github.com/repos/eleanorlydie-wq/extensions-inspector/releases/latest" | jq -r '[.assets[] | select(.name | endswith(".jar")) | .browser_download_url][0]')"
           curl -L "$INSPECTOR_LINK" -o ./Inspector.jar
           java -jar ./Inspector.jar "repo/apk" "output.json" "tmp"
           python ./.github/scripts/create-repo.py
@@ -160,6 +164,8 @@ jobs:
           DELETE: ${{ needs.prepare.outputs.delete }}
         run: |
           cd repo
-          pip install protobuf
+          # index_pb2.py is generated for protobuf 7.35.0; ValidateProtobufRuntimeVersion
+          # requires a same-major runtime >= that. Cap below 8 to avoid a major break.
+          pip install "protobuf>=7.35,<8"
           python ../main/.github/scripts/merge-repo.py "$DELETE"
           ../main/.github/scripts/commit-repo.sh
