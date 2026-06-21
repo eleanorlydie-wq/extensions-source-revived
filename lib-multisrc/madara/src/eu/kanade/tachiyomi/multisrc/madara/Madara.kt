@@ -938,7 +938,7 @@ abstract class Madara(
 
         return when {
             // Handle 'yesterday' and 'today', using midnight
-            WordSet("yesterday", "يوم واحد").startsWith(date) -> {
+            YESTERDAY_WORDS.startsWith(date) -> {
                 Calendar.getInstance().apply {
                     add(Calendar.DAY_OF_MONTH, -1) // yesterday
                     set(Calendar.HOUR_OF_DAY, 0)
@@ -948,7 +948,7 @@ abstract class Madara(
                 }.timeInMillis
             }
 
-            WordSet("today").startsWith(date) -> {
+            TODAY_WORDS.startsWith(date) -> {
                 Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
@@ -957,7 +957,7 @@ abstract class Madara(
                 }.timeInMillis
             }
 
-            WordSet("يومين").startsWith(date) -> {
+            DAY_BEFORE_YESTERDAY_WORDS.startsWith(date) -> {
                 Calendar.getInstance().apply {
                     add(Calendar.DAY_OF_MONTH, -2) // day before yesterday
                     set(Calendar.HOUR_OF_DAY, 0)
@@ -967,24 +967,24 @@ abstract class Madara(
                 }.timeInMillis
             }
 
-            WordSet("ago", "atrás", "önce", "قبل", "trước").endsWith(date) -> {
+            AGO_WORDS.endsWith(date) -> {
                 parseRelativeDate(date)
             }
 
-            WordSet("hace", "năm", "tháng", "tuần", "ngày", "giờ", "phút", "giây").startsWith(date) -> {
+            RELATIVE_DATE_PREFIX_WORDS.startsWith(date) -> {
                 parseRelativeDate(date)
             }
 
             // Handle "jour" with a number before it
-            date.contains(Regex("""\b\d+ jour""")) -> {
+            date.contains(JOUR_DATE_REGEX) -> {
                 parseRelativeDate(date)
             }
 
-            date.contains(Regex("""\d(st|nd|rd|th)""")) -> {
+            date.contains(ORDINAL_DATE_REGEX) -> {
                 // Clean date (e.g. 5th December 2019 to 5 December 2019) before parsing it
                 date.split(" ").map {
-                    if (it.contains(Regex("""\d\D\D"""))) {
-                        it.replace(Regex("""\D"""), "")
+                    if (it.contains(DIGIT_TWO_NONDIGITS_REGEX)) {
+                        it.replace(NON_DIGIT_REGEX, "")
                     } else {
                         it
                     }
@@ -999,17 +999,17 @@ abstract class Madara(
     // Parses dates in this form:
     // 21 horas ago
     protected open fun parseRelativeDate(date: String): Long {
-        val number = Regex("""(\d+)""").find(date)?.value?.toIntOrNull() ?: return 0
+        val number = NUMBER_REGEX.find(date)?.value?.toIntOrNull() ?: return 0
         val cal = Calendar.getInstance()
 
         return when {
-            WordSet("hari", "gün", "jour", "día", "dia", "day", "วัน", "ngày", "giorni", "أيام", "天").anyWordIn(date) -> cal.apply { add(Calendar.DAY_OF_MONTH, -number) }.timeInMillis
-            WordSet("jam", "saat", "heure", "hora", "hour", "ชั่วโมง", "giờ", "ore", "ساعة", "小时").anyWordIn(date) -> cal.apply { add(Calendar.HOUR, -number) }.timeInMillis
-            WordSet("menit", "dakika", "min", "minute", "minuto", "นาที", "دقائق", "phút").anyWordIn(date) -> cal.apply { add(Calendar.MINUTE, -number) }.timeInMillis
-            WordSet("detik", "segundo", "second", "วินาที", "giây").anyWordIn(date) -> cal.apply { add(Calendar.SECOND, -number) }.timeInMillis
-            WordSet("week", "semana", "tuần").anyWordIn(date) -> cal.apply { add(Calendar.DAY_OF_MONTH, -number * 7) }.timeInMillis
-            WordSet("month", "mes", "tháng").anyWordIn(date) -> cal.apply { add(Calendar.MONTH, -number) }.timeInMillis
-            WordSet("year", "año", "năm").anyWordIn(date) -> cal.apply { add(Calendar.YEAR, -number) }.timeInMillis
+            RELATIVE_DAY_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.DAY_OF_MONTH, -number) }.timeInMillis
+            RELATIVE_HOUR_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.HOUR, -number) }.timeInMillis
+            RELATIVE_MINUTE_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.MINUTE, -number) }.timeInMillis
+            RELATIVE_SECOND_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.SECOND, -number) }.timeInMillis
+            RELATIVE_WEEK_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.DAY_OF_MONTH, -number * 7) }.timeInMillis
+            RELATIVE_MONTH_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.MONTH, -number) }.timeInMillis
+            RELATIVE_YEAR_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.YEAR, -number) }.timeInMillis
             else -> 0
         }
     }
@@ -1173,6 +1173,27 @@ abstract class Madara(
     companion object {
         const val URL_SEARCH_PREFIX = "slug:"
         val URL_REGEX = """^(https?://[^\s/$.?#].[^\s]*)${'$'}""".toRegex()
+
+        // Hoisted out of parseChapterDate()/parseRelativeDate(), called once per chapter.
+        private val JOUR_DATE_REGEX = Regex("""\b\d+ jour""")
+        private val ORDINAL_DATE_REGEX = Regex("""\d(st|nd|rd|th)""")
+        private val DIGIT_TWO_NONDIGITS_REGEX = Regex("""\d\D\D""")
+        private val NON_DIGIT_REGEX = Regex("""\D""")
+        private val NUMBER_REGEX = Regex("""(\d+)""")
+
+        private val YESTERDAY_WORDS = WordSet("yesterday", "يوم واحد")
+        private val TODAY_WORDS = WordSet("today")
+        private val DAY_BEFORE_YESTERDAY_WORDS = WordSet("يومين")
+        private val AGO_WORDS = WordSet("ago", "atrás", "önce", "قبل", "trước")
+        private val RELATIVE_DATE_PREFIX_WORDS = WordSet("hace", "năm", "tháng", "tuần", "ngày", "giờ", "phút", "giây")
+
+        private val RELATIVE_DAY_WORDS = WordSet("hari", "gün", "jour", "día", "dia", "day", "วัน", "ngày", "giorni", "أيام", "天")
+        private val RELATIVE_HOUR_WORDS = WordSet("jam", "saat", "heure", "hora", "hour", "ชั่วโมง", "giờ", "ore", "ساعة", "小时")
+        private val RELATIVE_MINUTE_WORDS = WordSet("menit", "dakika", "min", "minute", "minuto", "นาที", "دقائق", "phút")
+        private val RELATIVE_SECOND_WORDS = WordSet("detik", "segundo", "second", "วินาที", "giây")
+        private val RELATIVE_WEEK_WORDS = WordSet("week", "semana", "tuần")
+        private val RELATIVE_MONTH_WORDS = WordSet("month", "mes", "tháng")
+        private val RELATIVE_YEAR_WORDS = WordSet("year", "año", "năm")
     }
 }
 
