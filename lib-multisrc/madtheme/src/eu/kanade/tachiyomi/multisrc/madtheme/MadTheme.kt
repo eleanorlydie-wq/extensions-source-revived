@@ -287,7 +287,7 @@ abstract class MadTheme(
 
         // Strip the baseUrl and heavily normalize double slashes to prevent duplicate mismatching
         url = if (rawUrl.startsWith(baseUrl)) {
-            rawUrl.substringAfter(baseUrl).replace(Regex("/{2,}"), "/")
+            rawUrl.substringAfter(baseUrl).replace(MULTI_SLASH_REGEX, "/")
         } else {
             rawUrl
         }
@@ -512,5 +512,6 @@ abstract class MadTheme(
         private val MANGA_ID_REGEX = """/manga/(\d+)-""".toRegex()
         private val CHAPTER_ID_REGEX = """chapterId\s*=\s*(\d+)""".toRegex()
         private val NUMBER_REGEX = """\d+""".toRegex()
+        private val MULTI_SLASH_REGEX = Regex("/{2,}")
     }
 }

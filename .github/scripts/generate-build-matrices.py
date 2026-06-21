@@ -12,7 +12,10 @@ MULTISRC_LIB_REGEX = re.compile(r"^lib-multisrc/(?P<multisrc>\w+)")
 LIB_REGEX = re.compile(r"^lib/(?P<lib>\w+)")
 MODULE_REGEX = re.compile(r"^:src:(?P<lang>\w+):(?P<extension>\w+)$")
 CORE_FILES_REGEX = re.compile(
-    r"^(common/|core/|gradle/|build\.gradle\.kts|common\.gradle|gradle\.properties|settings\.gradle\.kts|.github/scripts)"
+    # Only generate-build-matrices.py affects *what* gets built; the other
+    # .github/scripts/* files only touch post-build packaging/publishing, so
+    # editing them must not force a full rebuild of every extension.
+    r"^(common/|core/|gradle/|build\.gradle\.kts|common\.gradle|gradle\.properties|settings\.gradle\.kts|\.github/scripts/generate-build-matrices\.py)"
 )
 
 def run_command(command: str) -> str:

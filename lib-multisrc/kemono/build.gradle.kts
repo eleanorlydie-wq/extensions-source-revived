@@ -7,5 +7,5 @@ plugins {
 baseVersionCode = 24
 
 dependencies {
-    compileOnlyApi("com.squareup.okhttp3:okhttp-brotli:5.0.0-alpha.11")
+    compileOnlyApi("com.squareup.okhttp3:okhttp-brotli:5.3.2")
 }
