@@ -11,6 +11,11 @@ on:
       - '.github/scripts/**'
       - '.github/workflows/build_push.yml'
   workflow_dispatch:
+    inputs:
+      full_rebuild:
+        description: 'Rebuild every extension (ignore incremental change detection)'
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -27,6 +32,12 @@ jobs:
     name: Prepare job
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # nx-set-shas queries the Actions API to find the last successful run; without
+    # actions:read it 403s and falls back to the empty-tree SHA, which makes every
+    # push rebuild all extensions. contents:read covers the checkout below.
+    permissions:
+      contents: read
+      actions: read
     outputs:
       matrix: ${{ steps.generate-matrices.outputs.matrix }}
       delete: ${{ steps.generate-matrices.outputs.delete }}
@@ -38,14 +49,19 @@ jobs:
           persist-credentials: false
 
       - name: Get last successful CI commit
+        if: ${{ !inputs.full_rebuild }}
         uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
         with:
           fallback-sha: 4b825dc642cb6eb9a060e54bf8d69288fbee4904 # empty tree
 
       - id: generate-matrices
         name: Create output matrices
+        env:
+          # On a manual full_rebuild, diff against the empty tree so every module is
+          # considered changed; otherwise diff against nx-set-shas' last good commit.
+          BASE_REF: ${{ inputs.full_rebuild && '4b825dc642cb6eb9a060e54bf8d69288fbee4904' || env.NX_BASE }}
         run: |
-          python ./.github/scripts/generate-build-matrices.py "$NX_BASE" Release
+          python ./.github/scripts/generate-build-matrices.py "$BASE_REF" Release
 
   build:
     name: Build extensions (${{ matrix.chunk.number }})
