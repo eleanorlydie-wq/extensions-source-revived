@@ -34,11 +34,12 @@ class ExGalleryMetadata {
     companion object {
         private fun splitGalleryUrl(url: String) = url.let {
             // Only parse URL if is full URL
-            val pathSegments = if (it.startsWith("http")) {
-                Uri.parse(it).pathSegments
-            } else {
-                it.split('/')
-            }
+            val pathSegments =
+                if (it.startsWith("http")) {
+                    Uri.parse(it).pathSegments
+                } else {
+                    it.split('/')
+                }
             pathSegments.filterNot(String::isNullOrBlank)
         }
 
@@ -46,7 +47,10 @@ class ExGalleryMetadata {
 
         private fun galleryToken(url: String) = splitGalleryUrl(url)[2]
 
-        private fun normalizeUrl(id: String, token: String) = "/g/$id/$token/?nw=always"
+        private fun normalizeUrl(
+            id: String,
+            token: String,
+        ) = "/g/$id/$token/?nw=always"
 
         fun normalizeUrl(url: String) = normalizeUrl(galleryId(url), galleryToken(url))
     }
