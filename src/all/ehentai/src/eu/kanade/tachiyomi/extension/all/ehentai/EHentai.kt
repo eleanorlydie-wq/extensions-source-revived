@@ -37,8 +37,8 @@ import java.net.URLEncoder
 abstract class EHentai(
     override val lang: String,
     private val ehLang: String,
-) : ConfigurableSource, HttpSource() {
-
+) : HttpSource(),
+    ConfigurableSource {
     private val preferences: SharedPreferences by lazy {
         Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
     }
@@ -56,37 +56,40 @@ abstract class EHentai(
 
     private fun genericMangaParse(response: Response): MangasPage {
         val doc = response.asJsoup()
-        val mangaElements = doc.select("table.itg td.glname")
-            .let { elements ->
-                if (isLangNatural() && getEnforceLanguagePref()) {
-                    elements.filter { element ->
-                        // only accept elements with a language tag matching ehLang or without a language tag
-                        // could make this stricter and not accept elements without a language tag, possibly add a sharedpreference for it
-                        element.select("div[title^=language]").firstOrNull()?.let { it.text() == ehLang } ?: true
+        val mangaElements =
+            doc
+                .select("table.itg td.glname")
+                .let { elements ->
+                    if (isLangNatural() && getEnforceLanguagePref()) {
+                        elements.filter { element ->
+                            // only accept elements with a language tag matching ehLang or without a language tag
+                            // could make this stricter and not accept elements without a language tag, possibly add a sharedpreference for it
+                            element.select("div[title^=language]").firstOrNull()?.let { it.text() == ehLang } ?: true
+                        }
+                    } else {
+                        elements
                     }
-                } else {
-                    elements
                 }
-            }
         val parsedMangas: MutableList<SManga> = mutableListOf()
         for (i in mangaElements.indices) {
-            val manga = mangaElements[i].let {
-                SManga.create().apply {
-                    // Get title
-                    it.select("a")?.first()?.apply {
-                        title = this.select(".glink").text()
-                        url = ExGalleryMetadata.normalizeUrl(attr("href"))
-                        if (i == mangaElements.lastIndex) {
-                            lastMangaId = ExGalleryMetadata.galleryId(attr("href"))
+            val manga =
+                mangaElements[i].let {
+                    SManga.create().apply {
+                        // Get title
+                        it.select("a")?.first()?.apply {
+                            title = this.select(".glink").text()
+                            url = ExGalleryMetadata.normalizeUrl(attr("href"))
+                            if (i == mangaElements.lastIndex) {
+                                lastMangaId = ExGalleryMetadata.galleryId(attr("href"))
+                            }
+                        }
+                        // Get image
+                        it.parent()?.select(".glthumb img")?.first().apply {
+                            thumbnail_url = this?.attr("data-src")?.nullIfBlank()
+                                ?: this?.attr("src")
                         }
                     }
-                    // Get image
-                    it.parent()?.select(".glthumb img")?.first().apply {
-                        thumbnail_url = this?.attr("data-src")?.nullIfBlank()
-                            ?: this?.attr("src")
-                    }
                 }
-            }
             parsedMangas.add(manga)
         }
 
@@ -131,21 +134,22 @@ abstract class EHentai(
     }
 
     private fun parseChapterPage(response: Element) = with(response) {
-        select(".gdtm a").map {
-            Pair(it.child(0).attr("alt").toInt(), it.attr("href"))
-        }.sortedBy(Pair<Int, String>::first).map { it.second }
+        select(".gdtm a")
+            .map {
+                Pair(it.child(0).attr("alt").toInt(), it.attr("href"))
+            }.sortedBy(Pair<Int, String>::first)
+            .map { it.second }
     }
 
     private fun chapterPageCall(np: String) = client.newCall(chapterPageRequest(np)).asObservableSuccess()
+
     private fun chapterPageRequest(np: String) = exGet(np, null, headers)
 
     private fun nextPageUrl(element: Element) = element.select("a[onclick=return false]").last()?.let {
         if (it.text() == ">") it.attr("href") else null
     }
 
-    private fun languageTag(enforceLanguageFilter: Boolean = false): String {
-        return if (enforceLanguageFilter || getEnforceLanguagePref()) "language:$ehLang" else ""
-    }
+    private fun languageTag(enforceLanguageFilter: Boolean = false): String = if (enforceLanguageFilter || getEnforceLanguagePref()) "language:$ehLang" else ""
 
     override fun popularMangaRequest(page: Int) = if (isLangNatural()) {
         exGet("$baseUrl/?f_search=${languageTag()}&f_srdd=5&f_sr=on", page)
@@ -153,18 +157,25 @@ abstract class EHentai(
         latestUpdatesRequest(page)
     }
 
-    override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
+    override fun searchMangaRequest(
+        page: Int,
+        query: String,
+        filters: FilterList,
+    ): Request {
         val enforceLanguageFilter = filters.find { it is EnforceLanguageFilter }?.state == true
         val uri = Uri.parse("$baseUrl$QUERY_PREFIX").buildUpon()
-        var modifiedQuery = when {
-            !isLangNatural() -> query
-            query.isBlank() -> languageTag(enforceLanguageFilter)
-            else -> languageTag(enforceLanguageFilter).let { if (it.isNotEmpty()) "$query,$it" else query }
-        }
-        modifiedQuery += filters.filterIsInstance<TagFilter>()
-            .flatMap { it.markedTags() }
-            .joinToString(",")
-            .let { if (it.isNotEmpty()) ",$it" else it }
+        var modifiedQuery =
+            when {
+                !isLangNatural() -> query
+                query.isBlank() -> languageTag(enforceLanguageFilter)
+                else -> languageTag(enforceLanguageFilter).let { if (it.isNotEmpty()) "$query,$it" else query }
+            }
+        modifiedQuery +=
+            filters
+                .filterIsInstance<TagFilter>()
+                .flatMap { it.markedTags() }
+                .joinToString(",")
+                .let { if (it.isNotEmpty()) ",$it" else it }
         uri.appendQueryParameter("f_search", modifiedQuery)
         // when attempting to search with no genres selected, will auto select all genres
         filters.filterIsInstance<GenreGroup>().firstOrNull()?.state?.let {
@@ -192,10 +203,17 @@ abstract class EHentai(
     override fun latestUpdatesRequest(page: Int) = exGet(baseUrl, page)
 
     override fun popularMangaParse(response: Response) = genericMangaParse(response)
+
     override fun searchMangaParse(response: Response) = genericMangaParse(response)
+
     override fun latestUpdatesParse(response: Response) = genericMangaParse(response)
 
-    private fun exGet(url: String, page: Int? = null, additionalHeaders: Headers? = null, cache: Boolean = true): Request {
+    private fun exGet(
+        url: String,
+        page: Int? = null,
+        additionalHeaders: Headers? = null,
+        cache: Boolean = true,
+    ): Request {
         // pages no longer exist, if app attempts to go to the first page after a request, do not include the page append
         val pageIndex = if (page == 1) null else page
         return GET(
@@ -211,7 +229,6 @@ abstract class EHentai(
                 }
                 headers.build()
             } ?: headers,
-
         ).let {
             if (!cache) {
                 it.newBuilder().cacheControl(CacheControl.FORCE_NETWORK).build()
@@ -233,39 +250,68 @@ abstract class EHentai(
             altTitle = select("#gj").text().nullIfBlank()?.trim()
 
             // Thumbnail is set as background of element in style attribute
-            thumbnailUrl = select("#gd1 div").attr("style").nullIfBlank()?.let {
-                it.substring(it.indexOf('(') + 1 until it.lastIndexOf(')'))
-            }
-            genre = select("#gdc div").text().nullIfBlank()?.trim()?.lowercase()
+            thumbnailUrl =
+                select("#gd1 div").attr("style").nullIfBlank()?.let {
+                    it.substring(it.indexOf('(') + 1 until it.lastIndexOf(')'))
+                }
+            genre =
+                select("#gdc div")
+                    .text()
+                    .nullIfBlank()
+                    ?.trim()
+                    ?.lowercase()
 
             uploader = select("#gdn").text().nullIfBlank()?.trim()
 
             // Parse the table
             select("#gdd tr").forEach {
-                it.select(".gdt1")
+                it
+                    .select(".gdt1")
                     .text()
                     .nullIfBlank()
                     ?.trim()
                     ?.let { left ->
-                        it.select(".gdt2")
+                        it
+                            .select(".gdt2")
                             .text()
                             .nullIfBlank()
                             ?.trim()
                             ?.let { right ->
                                 ignore {
                                     when (
-                                        left.removeSuffix(":")
+                                        left
+                                            .removeSuffix(":")
                                             .lowercase()
                                     ) {
-                                        "posted" -> datePosted = EX_DATE_FORMAT.parse(right)?.time ?: 0
-                                        "visible" -> visible = right.nullIfBlank()
+                                        "posted" -> {
+                                            datePosted = EX_DATE_FORMAT.parse(right)?.time ?: 0
+                                        }
+                                        "visible" -> {
+                                            visible = right.nullIfBlank()
+                                        }
                                         "language" -> {
                                             language = right.removeSuffix(TR_SUFFIX).trim().nullIfBlank()
                                             translated = right.endsWith(TR_SUFFIX, true)
                                         }
-                                        "file size" -> size = parseHumanReadableByteCount(right)?.toLong()
-                                        "length" -> length = right.removeSuffix("pages").trim().nullIfBlank()?.toInt()
-                                        "favorited" -> favorites = right.removeSuffix("times").trim().nullIfBlank()?.toInt()
+                                        "file size" -> {
+                                            size = parseHumanReadableByteCount(right)?.toLong()
+                                        }
+                                        "length" -> {
+                                            length =
+                                                right
+                                                    .removeSuffix("pages")
+                                                    .trim()
+                                                    .nullIfBlank()
+                                                    ?.toInt()
+                                        }
+                                        "favorited" -> {
+                                            favorites =
+                                                right
+                                                    .removeSuffix("times")
+                                                    .trim()
+                                                    .nullIfBlank()
+                                                    ?.toInt()
+                                        }
                                     }
                                 }
                             }
@@ -274,29 +320,32 @@ abstract class EHentai(
 
             // Parse ratings
             ignore {
-                averageRating = select("#rating_label")
-                    .text()
-                    .removePrefix("Average:")
-                    .trim()
-                    .nullIfBlank()
-                    ?.toDouble()
-                ratingCount = select("#rating_count")
-                    .text()
-                    .trim()
-                    .nullIfBlank()
-                    ?.toInt()
+                averageRating =
+                    select("#rating_label")
+                        .text()
+                        .removePrefix("Average:")
+                        .trim()
+                        .nullIfBlank()
+                        ?.toDouble()
+                ratingCount =
+                    select("#rating_count")
+                        .text()
+                        .trim()
+                        .nullIfBlank()
+                        ?.toInt()
             }
 
             // Parse tags
             tags.clear()
             select("#taglist tr").forEach {
                 val namespace = it.select(".tc").text().removeSuffix(":")
-                val currentTags = it.select("div").map { element ->
-                    Tag(
-                        element.text().trim(),
-                        element.hasClass("gtl"),
-                    )
-                }
+                val currentTags =
+                    it.select("div").map { element ->
+                        Tag(
+                            element.text().trim(),
+                            element.hasClass("gtl"),
+                        )
+                    }
                 tags[namespace] = currentTags
             }
 
@@ -310,21 +359,27 @@ abstract class EHentai(
 
     private fun searchMangaByIdRequest(id: String) = GET("$baseUrl/g/$id", headers)
 
-    private fun searchMangaByIdParse(response: Response, id: String): MangasPage {
+    private fun searchMangaByIdParse(
+        response: Response,
+        id: String,
+    ): MangasPage {
         val details = mangaDetailsParse(response)
         details.url = "/g/$id/"
         return MangasPage(listOf(details), false)
     }
 
-    override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> {
-        return if (query.startsWith(PREFIX_ID_SEARCH)) {
-            val id = query.removePrefix(PREFIX_ID_SEARCH)
-            client.newCall(searchMangaByIdRequest(id))
-                .asObservableSuccess()
-                .map { response -> searchMangaByIdParse(response, id) }
-        } else {
-            super.fetchSearchManga(page, query, filters)
-        }
+    override fun fetchSearchManga(
+        page: Int,
+        query: String,
+        filters: FilterList,
+    ): Observable<MangasPage> = if (query.startsWith(PREFIX_ID_SEARCH)) {
+        val id = query.removePrefix(PREFIX_ID_SEARCH)
+        client
+            .newCall(searchMangaByIdRequest(id))
+            .asObservableSuccess()
+            .map { response -> searchMangaByIdParse(response, id) }
+    } else {
+        super.fetchSearchManga(page, query, filters)
     }
 
     override fun chapterListParse(response: Response) = throw UnsupportedOperationException("Unused method was called somehow!")
@@ -343,9 +398,11 @@ abstract class EHentai(
         settings += "prn_n"
 
         // Exclude every other language except the one we have selected
-        settings += "xl_" + languageMappings.filter { it.first != ehLang }
-            .flatMap { it.second }
-            .joinToString("x")
+        settings += "xl_" +
+            languageMappings
+                .filter { it.first != ehLang }
+                .flatMap { it.second }
+                .joinToString("x")
 
         cookies["uconfig"] = buildSettings(settings)
 
@@ -365,23 +422,31 @@ abstract class EHentai(
     }
 
     @Suppress("SameParameterValue")
-    private fun addParam(url: String, param: String, value: String) = Uri.parse(url)
+    private fun addParam(
+        url: String,
+        param: String,
+        value: String,
+    ) = Uri
+        .parse(url)
         .buildUpon()
         .appendQueryParameter(param, value)
         .toString()
 
-    override val client = network.client.newBuilder()
-        .cookieJar(CookieJar.NO_COOKIES)
-        .addInterceptor { chain ->
-            val newReq = chain
-                .request()
-                .newBuilder()
-                .removeHeader("Cookie")
-                .addHeader("Cookie", cookiesHeader)
-                .build()
+    override val client =
+        network.client
+            .newBuilder()
+            .cookieJar(CookieJar.NO_COOKIES)
+            .addInterceptor { chain ->
+                val newReq =
+                    chain
+                        .request()
+                        .newBuilder()
+                        .removeHeader("Cookie")
+                        .addHeader("Cookie", cookiesHeader)
+                        .build()
 
-            chain.proceed(newReq)
-        }.build()
+                chain.proceed(newReq)
+            }.build()
 
     // Filters
     override fun getFilterList() = FilterList(
@@ -394,7 +459,9 @@ abstract class EHentai(
         AdvancedGroup(),
     )
 
-    class Watched : CheckBox("Watched List"), UriFilter {
+    class Watched :
+        CheckBox("Watched List"),
+        UriFilter {
         override fun addToUri(builder: Uri.Builder) {
             if (state) {
                 builder.appendPath("watched")
@@ -402,29 +469,39 @@ abstract class EHentai(
         }
     }
 
-    class GenreOption(name: String, private val genreId: String) : CheckBox(name, false), UriFilter {
+    class GenreOption(
+        name: String,
+        private val genreId: String,
+    ) : CheckBox(name, false),
+        UriFilter {
         override fun addToUri(builder: Uri.Builder) {
             builder.appendQueryParameter("f_$genreId", if (state) "1" else "0")
         }
     }
 
-    class GenreGroup : UriGroup<GenreOption>(
-        "Genres",
-        listOf(
-            GenreOption("Dōjinshi", "doujinshi"),
-            GenreOption("Manga", "manga"),
-            GenreOption("Artist CG", "artistcg"),
-            GenreOption("Game CG", "gamecg"),
-            GenreOption("Western", "western"),
-            GenreOption("Non-H", "non-h"),
-            GenreOption("Image Set", "imageset"),
-            GenreOption("Cosplay", "cosplay"),
-            GenreOption("Asian Porn", "asianporn"),
-            GenreOption("Misc", "misc"),
-        ),
-    )
+    class GenreGroup :
+        UriGroup<GenreOption>(
+            "Genres",
+            listOf(
+                GenreOption("Dōjinshi", "doujinshi"),
+                GenreOption("Manga", "manga"),
+                GenreOption("Artist CG", "artistcg"),
+                GenreOption("Game CG", "gamecg"),
+                GenreOption("Western", "western"),
+                GenreOption("Non-H", "non-h"),
+                GenreOption("Image Set", "imageset"),
+                GenreOption("Cosplay", "cosplay"),
+                GenreOption("Asian Porn", "asianporn"),
+                GenreOption("Misc", "misc"),
+            ),
+        )
 
-    class AdvancedOption(name: String, private val param: String, defValue: Boolean = false) : CheckBox(name, defValue), UriFilter {
+    class AdvancedOption(
+        name: String,
+        private val param: String,
+        defValue: Boolean = false,
+    ) : CheckBox(name, defValue),
+        UriFilter {
         override fun addToUri(builder: Uri.Builder) {
             if (state) {
                 builder.appendQueryParameter(param, "on")
@@ -432,7 +509,11 @@ abstract class EHentai(
         }
     }
 
-    open class PageOption(name: String, private val queryKey: String) : Text(name), UriFilter {
+    open class PageOption(
+        name: String,
+        private val queryKey: String,
+    ) : Text(name),
+        UriFilter {
         override fun addToUri(builder: Uri.Builder) {
             if (state.isNotBlank()) {
                 if (builder.build().getQueryParameters("f_sp").isEmpty()) {
@@ -445,6 +526,7 @@ abstract class EHentai(
     }
 
     class MinPagesOption : PageOption("Minimum Pages", "f_spf")
+
     class MaxPagesOption : PageOption("Maximum Pages", "f_spt")
 
     class RatingOption :
@@ -468,24 +550,27 @@ abstract class EHentai(
     }
 
     // Explicit type arg for listOf() to workaround this: KT-16570
-    class AdvancedGroup : UriGroup<Filter<*>>(
-        "Advanced Options",
-        listOf(
-            AdvancedOption("Search Gallery Name", "f_sname", true),
-            AdvancedOption("Search Gallery Tags", "f_stags", true),
-            AdvancedOption("Search Gallery Description", "f_sdesc"),
-            AdvancedOption("Search Torrent Filenames", "f_storr"),
-            AdvancedOption("Only Show Galleries With Torrents", "f_sto"),
-            AdvancedOption("Search Low-Power Tags", "f_sdt1"),
-            AdvancedOption("Search Downvoted Tags", "f_sdt2"),
-            AdvancedOption("Show Expunged Galleries", "f_sh"),
-            RatingOption(),
-            MinPagesOption(),
-            MaxPagesOption(),
-        ),
-    )
+    class AdvancedGroup :
+        UriGroup<Filter<*>>(
+            "Advanced Options",
+            listOf(
+                AdvancedOption("Search Gallery Name", "f_sname", true),
+                AdvancedOption("Search Gallery Tags", "f_stags", true),
+                AdvancedOption("Search Gallery Description", "f_sdesc"),
+                AdvancedOption("Search Torrent Filenames", "f_storr"),
+                AdvancedOption("Only Show Galleries With Torrents", "f_sto"),
+                AdvancedOption("Search Low-Power Tags", "f_sdt1"),
+                AdvancedOption("Search Downvoted Tags", "f_sdt2"),
+                AdvancedOption("Show Expunged Galleries", "f_sh"),
+                RatingOption(),
+                MinPagesOption(),
+                MaxPagesOption(),
+            ),
+        )
 
-    private class EnforceLanguageFilter(default: Boolean) : CheckBox("Enforce language", default)
+    private class EnforceLanguageFilter(
+        default: Boolean,
+    ) : CheckBox("Enforce language", default)
 
     private val miscTags = "3d, already uploaded, anaglyph, animal on animal, animated, anthology, arisa mizuhara, artbook, ashiya noriko, bailey jay, body swap, caption, chouzuki maryou, christian godard, comic, compilation, dakimakura, fe galvao, ffm threesome, figure, forbidden content, full censorship, full color, game sprite, goudoushi, group, gunyou mikan, harada shigemitsu, hardcore, helly von valentine, higurashi rin, hololive, honey select, how to, incest, incomplete, ishiba yoshikazu, jessica nigri, kalinka fox, kanda midori, kira kira, kitami eri, kuroi hiroki, lenfried, lincy leaw, marie claude bourbonnais, matsunaga ayaka, me me me, missing cover, mmf threesome, mmt threesome, mosaic censorship, mtf threesome, multi-work series, no penetration, non-nude, novel, nudity only, oakazaki joe, out of order, paperchild, pm02 colon 20, poor grammar, radio comix, realporn, redraw, replaced, sakaki kasa, sample, saotome love, scanmark, screenshots, sinful goddesses, sketch lines, stereoscopic, story arc, takeuti ken, tankoubon, themeless, tikuma jukou, time stop, tsubaki zakuro, ttm threesome, twins, uncensored, vandych alex, variant set, watermarked, webtoon, western cg, western imageset, western non-h, yamato nadeshiko club, yui okada, yukkuri, zappa go"
     private val femaleTags = "ahegao, anal, angel, apron, bandages, bbw, bdsm, beauty mark, big areolae, big ass, big breasts, big clit, big lips, big nipples, bikini, blackmail, bloomers, blowjob, bodysuit, bondage, breast expansion, bukkake, bunny girl, business suit, catgirl, centaur, cheating, chinese dress, christmas, collar, corset, cosplaying, cowgirl, crossdressing, cunnilingus, dark skin, daughter, deepthroat, defloration, demon girl, double penetration, dougi, dragon, drunk, elf, exhibitionism, farting, females only, femdom, filming, fingering, fishnets, footjob, fox girl, furry, futanari, garter belt, ghost, giantess, glasses, gloves, goblin, gothic lolita, growth, guro, gyaru, hair buns, hairy, hairy armpits, handjob, harem, hidden sex, horns, huge breasts, humiliation, impregnation, incest, inverted nipples, kemonomimi, kimono, kissing, lactation, latex, leg lock, leotard, lingerie, lizard girl, maid, masked face, masturbation, midget, miko, milf, mind break, mind control, monster girl, mother, muscle, nakadashi, netorare, nose hook, nun, nurse, oil, paizuri, panda girl, pantyhose, piercing, pixie cut, policewoman, ponytail, pregnant, rape, rimjob, robot, scat, schoolgirl uniform, sex toys, shemale, sister, small breasts, smell, sole dickgirl, sole female, squirting, stockings, sundress, sweating, swimsuit, swinging, tail, tall girl, teacher, tentacles, thigh high boots, tomboy, transformation, twins, twintails, unusual pupils, urination, vore, vtuber, widow, wings, witch, wolf girl, x-ray, yuri, zombie"
@@ -493,31 +578,39 @@ abstract class EHentai(
 
     private fun triStateBoxesFrom(tagString: String): List<TagTriState> = tagString.split(", ").map { TagTriState(it) }
 
-    class TagTriState(tag: String) : TriState(tag)
-    class TagFilter(name: String, private val triStateBoxes: List<TagTriState>, private val nameSpace: String) : Group<TagTriState>(name, triStateBoxes) {
+    class TagTriState(
+        tag: String,
+    ) : TriState(tag)
+
+    class TagFilter(
+        name: String,
+        private val triStateBoxes: List<TagTriState>,
+        private val nameSpace: String,
+    ) : Group<TagTriState>(name, triStateBoxes) {
         fun markedTags() = triStateBoxes.filter { it.isIncluded() }.map { "$nameSpace:${it.name}" } + triStateBoxes.filter { it.isExcluded() }.map { "-$nameSpace:${it.name}" }
     }
 
     // map languages to their internal ids
-    private val languageMappings = listOf(
-        Pair("japanese", listOf("0", "1024", "2048")),
-        Pair("english", listOf("1", "1025", "2049")),
-        Pair("chinese", listOf("10", "1034", "2058")),
-        Pair("dutch", listOf("20", "1044", "2068")),
-        Pair("french", listOf("30", "1054", "2078")),
-        Pair("german", listOf("40", "1064", "2088")),
-        Pair("hungarian", listOf("50", "1074", "2098")),
-        Pair("italian", listOf("60", "1084", "2108")),
-        Pair("korean", listOf("70", "1094", "2118")),
-        Pair("polish", listOf("80", "1104", "2128")),
-        Pair("portuguese", listOf("90", "1114", "2138")),
-        Pair("russian", listOf("100", "1124", "2148")),
-        Pair("spanish", listOf("110", "1134", "2158")),
-        Pair("thai", listOf("120", "1144", "2168")),
-        Pair("vietnamese", listOf("130", "1154", "2178")),
-        Pair("n/a", listOf("254", "1278", "2302")),
-        Pair("other", listOf("255", "1279", "2303")),
-    )
+    private val languageMappings =
+        listOf(
+            Pair("japanese", listOf("0", "1024", "2048")),
+            Pair("english", listOf("1", "1025", "2049")),
+            Pair("chinese", listOf("10", "1034", "2058")),
+            Pair("dutch", listOf("20", "1044", "2068")),
+            Pair("french", listOf("30", "1054", "2078")),
+            Pair("german", listOf("40", "1064", "2088")),
+            Pair("hungarian", listOf("50", "1074", "2098")),
+            Pair("italian", listOf("60", "1084", "2108")),
+            Pair("korean", listOf("70", "1094", "2118")),
+            Pair("polish", listOf("80", "1104", "2128")),
+            Pair("portuguese", listOf("90", "1114", "2138")),
+            Pair("russian", listOf("100", "1124", "2148")),
+            Pair("spanish", listOf("110", "1134", "2158")),
+            Pair("thai", listOf("120", "1144", "2168")),
+            Pair("vietnamese", listOf("130", "1154", "2178")),
+            Pair("n/a", listOf("254", "1278", "2302")),
+            Pair("other", listOf("255", "1279", "2303")),
+        )
 
     companion object {
         const val QUERY_PREFIX = "?f_apply=Apply+Filter"
@@ -534,17 +627,18 @@ abstract class EHentai(
     // Preferences
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
-        val enforceLanguagePref = CheckBoxPreference(screen.context).apply {
-            key = "${ENFORCE_LANGUAGE_PREF_KEY}_$lang"
-            title = ENFORCE_LANGUAGE_PREF_TITLE
-            summary = ENFORCE_LANGUAGE_PREF_SUMMARY
-            setDefaultValue(ENFORCE_LANGUAGE_PREF_DEFAULT_VALUE)
+        val enforceLanguagePref =
+            CheckBoxPreference(screen.context).apply {
+                key = "${ENFORCE_LANGUAGE_PREF_KEY}_$lang"
+                title = ENFORCE_LANGUAGE_PREF_TITLE
+                summary = ENFORCE_LANGUAGE_PREF_SUMMARY
+                setDefaultValue(ENFORCE_LANGUAGE_PREF_DEFAULT_VALUE)
 
-            setOnPreferenceChangeListener { _, newValue ->
-                val checkValue = newValue as Boolean
-                preferences.edit().putBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", checkValue).commit()
+                setOnPreferenceChangeListener { _, newValue ->
+                    val checkValue = newValue as Boolean
+                    preferences.edit().putBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", checkValue).commit()
+                }
             }
-        }
         screen.addPreference(enforceLanguagePref)
     }
 
