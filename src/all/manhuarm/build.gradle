@@ -10,5 +10,5 @@ ext {
 apply plugin: "kei.plugins.extension.legacy"
 
 dependencies {
-    compileOnly("com.squareup.okhttp3:okhttp-brotli:5.0.0-alpha.11")
+    compileOnly("com.squareup.okhttp3:okhttp-brotli:5.3.2")
 }
