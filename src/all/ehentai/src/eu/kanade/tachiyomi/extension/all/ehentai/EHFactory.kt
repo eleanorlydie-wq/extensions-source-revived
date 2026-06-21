@@ -26,22 +26,38 @@ class EHFactory : SourceFactory {
 }
 
 class EHentaiJa : EHentai("ja", "japanese")
+
 class EHentaiEn : EHentai("en", "english")
+
 class EHentaiZh : EHentai("zh", "chinese")
+
 class EHentaiNl : EHentai("nl", "dutch")
+
 class EHentaiFr : EHentai("fr", "french")
+
 class EHentaiDe : EHentai("de", "german")
+
 class EHentaiHu : EHentai("hu", "hungarian")
+
 class EHentaiIt : EHentai("it", "italian")
+
 class EHentaiKo : EHentai("ko", "korean")
+
 class EHentaiPl : EHentai("pl", "polish")
+
 class EHentaiPtBr : EHentai("pt-BR", "portuguese") {
     // Hardcode the id because the language wasn't specific.
     override val id: Long = 7151438547982231541
 }
+
 class EHentaiRu : EHentai("ru", "russian")
+
 class EHentaiEs : EHentai("es", "spanish")
+
 class EHentaiTh : EHentai("th", "thai")
+
 class EHentaiVi : EHentai("vi", "vietnamese")
+
 class EHentaiNone : EHentai("none", "n/a")
+
 class EHentaiOther : EHentai("other", "other")

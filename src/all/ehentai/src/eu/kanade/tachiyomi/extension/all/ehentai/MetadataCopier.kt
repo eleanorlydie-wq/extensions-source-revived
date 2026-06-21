@@ -8,11 +8,12 @@ import java.util.Locale
 private const val EH_ARTIST_NAMESPACE = "artist"
 private const val EH_AUTHOR_NAMESPACE = "author"
 
-private val ONGOING_SUFFIX = arrayOf(
-    "[ongoing]",
-    "(ongoing)",
-    "{ongoing}",
-)
+private val ONGOING_SUFFIX =
+    arrayOf(
+        "[ongoing]",
+        "(ongoing)",
+        "{ongoing}",
+    )
 
 val EX_DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
 
@@ -38,8 +39,8 @@ fun ExGalleryMetadata.copyTo(manga: SManga) {
     manga.status = SManga.COMPLETED
     title?.let { t ->
         if (ONGOING_SUFFIX.any {
-            t.endsWith(it, ignoreCase = true)
-        }
+                t.endsWith(it, ignoreCase = true)
+            }
         ) {
             manga.status = SManga.ONGOING
         }
@@ -70,9 +71,10 @@ fun ExGalleryMetadata.copyTo(manga: SManga) {
 
     val tagsDesc = buildTagsDescription(this)
 
-    manga.description = listOf(titleDesc.toString(), detailsDesc.toString(), tagsDesc.toString())
-        .filter(String::isNotBlank)
-        .joinToString(separator = "\n")
+    manga.description =
+        listOf(titleDesc.toString(), detailsDesc.toString(), tagsDesc.toString())
+            .filter(String::isNotBlank)
+            .joinToString(separator = "\n")
 }
 
 private fun buildTagsDescription(metadata: ExGalleryMetadata) = StringBuilder("Tags:\n").apply {
