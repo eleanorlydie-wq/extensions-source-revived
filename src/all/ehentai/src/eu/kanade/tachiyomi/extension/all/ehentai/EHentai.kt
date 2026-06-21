@@ -180,15 +180,10 @@ abstract class EHentai(
                 else -> languageTag(enforceLanguageFilter).let { if (it.isNotEmpty()) "$query,$it" else query }
             }
         val typedTags =
-            filters
-                .filterIsInstance<TagAutoCompleteFilter>()
-                .firstOrNull()
-                ?.state
-                .orEmpty()
-                .split(',', ';')
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .distinct()
+            (
+                filters.filterIsInstance<NamespaceTagFilter>().flatMap { it.qualifiedTags() } +
+                    filters.filterIsInstance<OtherTagFilter>().flatMap { it.qualifiedTags() }
+                ).distinct()
         // Remember how often each tag is searched so frequent ones are proposed first next time.
         recordTagUsage(typedTags)
         modifiedQuery +=
@@ -473,8 +468,10 @@ abstract class EHentai(
         Watched(),
         GenreGroup(),
         Filter.Header("Tags — separate with , or ;  ·  prefix - to exclude"),
-        Filter.Header("Examples: female:big breasts · parody:naruto · artist:rei · -guro"),
-        TagAutoCompleteFilter(orderedTagSuggestions()),
+        FemaleTagFilter(namespaceSuggestions("female")),
+        MaleTagFilter(namespaceSuggestions("male")),
+        MixedTagFilter(namespaceSuggestions("mixed")),
+        OtherTagFilter(otherSuggestions()),
         AdvancedGroup(),
     )
 
@@ -482,13 +479,70 @@ abstract class EHentai(
     // This surfaces the tags the user searches most often at the top of the autocomplete dropdown.
     private fun orderedTagSuggestions(): List<String> = (mostUsedTags() + EH_TAG_SUGGESTIONS).distinct()
 
-    class TagAutoCompleteFilter(
+    // Suggestions for a single namespace's input box, with the "namespace:" prefix stripped
+    // so the dropdown shows exactly what the user types into that box (e.g. "big breasts").
+    private fun namespaceSuggestions(namespace: String): List<String> = orderedTagSuggestions()
+        .filter { it.startsWith("$namespace:") }
+        .map { it.removePrefix("$namespace:") }
+        .distinct()
+
+    // Suggestions for the general box: everything that isn't covered by a dedicated box,
+    // kept fully-qualified (e.g. "parody:naruto") since that box is typed with prefixes.
+    private fun otherSuggestions(): List<String> {
+        val dedicated = listOf("female:", "male:", "mixed:")
+        return orderedTagSuggestions()
+            .filter { tag -> dedicated.none { tag.startsWith(it) } }
+            .distinct()
+    }
+
+    // A tag input scoped to a single E-Hentai namespace. The user types bare tags
+    // (e.g. "big breasts, -guro") and the namespace is added automatically.
+    abstract class NamespaceTagFilter(
+        name: String,
+        private val namespace: String,
         suggestions: List<String>,
     ) : Filter.AutoComplete(
-        name = "Tags",
-        hint = "e.g. female:big breasts, parody:naruto; -guro",
+        name = name,
+        hint = "e.g. big breasts, sole female; -guro",
         suggestions = suggestions,
-    )
+    ) {
+        // Turn the bare input into fully-qualified "namespace:tag" tokens, preserving "-" exclusions.
+        fun qualifiedTags(): List<String> = state
+            .split(',', ';')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .map { token ->
+                val exclude = token.startsWith("-")
+                val bare = token.removePrefix("-").trim()
+                // If the user already typed a namespace, leave it; otherwise prepend this box's.
+                val qualified = if (bare.contains(':')) bare else "$namespace:$bare"
+                if (exclude) "-$qualified" else qualified
+            }
+            .filter { it.isNotEmpty() }
+            .distinct()
+    }
+
+    class FemaleTagFilter(suggestions: List<String>) : NamespaceTagFilter("Female tags", "female", suggestions)
+
+    class MaleTagFilter(suggestions: List<String>) : NamespaceTagFilter("Male tags", "male", suggestions)
+
+    class MixedTagFilter(suggestions: List<String>) : NamespaceTagFilter("Mixed tags", "mixed", suggestions)
+
+    // General box for anything without a dedicated namespace box (parody:, artist:, language:, …).
+    // Typed with full prefixes; the hint shows greyed-out examples.
+    class OtherTagFilter(
+        suggestions: List<String>,
+    ) : Filter.AutoComplete(
+        name = "Other tags",
+        hint = "e.g. parody:naruto, artist:rei, language:english; -guro",
+        suggestions = suggestions,
+    ) {
+        fun qualifiedTags(): List<String> = state
+            .split(',', ';')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+    }
 
     class Watched :
         CheckBox("Watched List"),
