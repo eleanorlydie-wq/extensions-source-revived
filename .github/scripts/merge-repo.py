@@ -51,7 +51,7 @@ def extract_extension_lib(version: str) -> str:
 index = index_pb2.Index(
     name = "Keiyoushi",
     badgeLabel = "KEI",
-    signingKey = "9add655a78e96c4ec7a53ef89dccb557cb5d767489fac5e785d671a5a75d4da2",
+    signingKey = "0bbd2d7c25bfae3a0fc1beadc21c583176c27183e9d0d559add7be3b4145a69c",
     contact=index_pb2.Contact(
         website="https://keiyoushi.github.io",
         discord="https://discord.gg/3FbCpdKbdY"
@@ -61,8 +61,8 @@ index = index_pb2.Index(
             name=extension["name"].replace("Tachiyomi: ", ""),
             packageName=extension["pkg"],
             resources=index_pb2.Resources(
-                apkUrl=f"https://raw.githubusercontent.com/keiyoushi/extensions/refs/heads/repo/apk/{extension["apk"]}",
-                iconUrl=f"https://raw.githubusercontent.com/keiyoushi/extensions/refs/heads/repo/icon/{extension["pkg"]}.png",
+                apkUrl=f"https://raw.githubusercontent.com/eleanorlydie-wq/extensions/refs/heads/repo/apk/{extension["apk"]}",
+                iconUrl=f"https://raw.githubusercontent.com/eleanorlydie-wq/extensions/refs/heads/repo/icon/{extension["pkg"]}.png",
             ),
             extensionLib=extract_extension_lib(extension["version"]),
             versionCode=extension["code"],
