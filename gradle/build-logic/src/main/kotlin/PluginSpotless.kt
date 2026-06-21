@@ -1,4 +1,5 @@
 import com.diffplug.gradle.spotless.SpotlessExtension
+import com.diffplug.gradle.spotless.SpotlessTask
 import com.diffplug.spotless.FormatterFunc
 import com.diffplug.spotless.FormatterStep
 import keiyoushi.gradle.extensions.alias
@@ -6,9 +7,22 @@ import keiyoushi.gradle.extensions.libs
 import keiyoushi.gradle.extensions.plugins
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.invoke
+import org.gradle.kotlin.dsl.registerIfAbsent
 import java.io.Serializable
+
+/**
+ * No-op build service used purely as a concurrency constraint. spotless 8.x lets a
+ * project's per-format tasks (spotlessKotlin/spotlessJava/spotlessXml/…) run concurrently
+ * and they race on the shared `build/spotless-clean` directory, failing intermittently
+ * with `Could not read path .../build/spotless-clean/spotless<Format>`. Registering this
+ * service with maxParallelUsages = 1 and having every spotless task use it forces them to
+ * run one at a time, eliminating the race.
+ */
+abstract class SpotlessExclusiveLock : BuildService<BuildServiceParameters.None>
 
 @Suppress("UNUSED")
 class PluginSpotless : Plugin<Project> {
@@ -56,6 +70,18 @@ class PluginSpotless : Plugin<Project> {
                 trimTrailingWhitespace()
                 endWithNewline()
             }
+        }
+
+        // Serialize spotless task execution to avoid the spotless-clean race (see
+        // SpotlessExclusiveLock). registerIfAbsent is idempotent across all projects.
+        val spotlessLock = gradle.sharedServices.registerIfAbsent(
+            "spotlessExclusiveLock",
+            SpotlessExclusiveLock::class.java,
+        ) {
+            maxParallelUsages.set(1)
+        }
+        tasks.withType(SpotlessTask::class.java).configureEach {
+            usesService(spotlessLock)
         }
     }
 }
