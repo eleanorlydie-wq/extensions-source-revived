@@ -7,6 +7,10 @@ package keiyoushi.lib.cryptoaes
  * Currently only supports Numeric and decimal ('.') characters
  */
 object Deobfuscator {
+    // Hoisted out of calculateDigit(), which is called once per decoded digit.
+    private val EXCLAIM_PLUS_BRACKETS_REGEX = "!\\+\\[]".toRegex() // matches '!+[]'
+    private val PLUS_BRACKETS_REGEX = "\\+\\[]".toRegex() // matches '+[]'
+
     fun deobfuscateJsPassword(inputString: String): String {
         var idx = 0
         val brackets = listOf('[', '(')
@@ -60,9 +64,9 @@ object Deobfuscator {
            therefore '!+[]' count equals the digit
            if count equals 0, check for '+[]' just to be sure
          */
-        val digit = "!\\+\\[]".toRegex().findAll(inputSubString).count() // matches '!+[]'
+        val digit = EXCLAIM_PLUS_BRACKETS_REGEX.findAll(inputSubString).count() // matches '!+[]'
         if (digit == 0) {
-            if ("\\+\\[]".toRegex().findAll(inputSubString).count() == 1) { // matches '+[]'
+            if (PLUS_BRACKETS_REGEX.findAll(inputSubString).count() == 1) { // matches '+[]'
                 return '0'
             }
         } else if (digit in 1..9) {
