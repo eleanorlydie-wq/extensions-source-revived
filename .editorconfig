@@ -18,7 +18,7 @@ ij_kotlin_name_count_to_use_star_import_for_members = 2147483647
 
 ktlint_standard_discouraged-comment-location = disabled
 ktlint_function_signature_body_expression_wrapping = default
-ktlint_standard_chain-method-continuation = disable
+ktlint_standard_chain-method-continuation = disabled
 ktlint_standard_blank-line-between-when-conditions = disabled
 ktlint_standard_no-unused-imports = enabled
 
