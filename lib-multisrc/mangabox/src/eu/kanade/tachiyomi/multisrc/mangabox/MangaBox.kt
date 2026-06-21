@@ -379,8 +379,8 @@ abstract class MangaBox(
 
         description = document.selectFirst(descriptionSelector)?.ownText()
             ?.replace("""^$title summary:\s""".toRegex(), "")
-            ?.replace("""<\s*br\s*/?>""".toRegex(), "\n")
-            ?.replace("<[^>]*>".toRegex(), "")
+            ?.replace(BR_TAG_REGEX, "\n")
+            ?.replace(HTML_TAG_REGEX, "")
         thumbnail_url = document.selectFirst(thumbnailSelector)!!.attr("abs:src")
 
         // add alternative name to manga description
@@ -580,19 +580,16 @@ abstract class MangaBox(
     @SuppressLint("DefaultLocale")
     open fun normalizeSearchQuery(query: String): String {
         var str = query.lowercase()
-        str = str.replace("[àáạảãâầấậẩẫăằắặẳẵ]".toRegex(), "a")
-        str = str.replace("[èéẹẻẽêềếệểễ]".toRegex(), "e")
-        str = str.replace("[ìíịỉĩ]".toRegex(), "i")
-        str = str.replace("[òóọỏõôồốộổỗơờớợởỡ]".toRegex(), "o")
-        str = str.replace("[ùúụủũưừứựửữ]".toRegex(), "u")
-        str = str.replace("[ỳýỵỷỹ]".toRegex(), "y")
-        str = str.replace("đ".toRegex(), "d")
-        str = str.replace(
-            """!|@|%|\^|\*|\(|\)|\+|=|<|>|\?|/|,|\.|:|;|'| |"|&|#|\[|]|~|-|$|_""".toRegex(),
-            "_",
-        )
-        str = str.replace("_+_".toRegex(), "_")
-        str = str.replace("""^_+|_+$""".toRegex(), "")
+        str = str.replace(ACCENT_A_REGEX, "a")
+        str = str.replace(ACCENT_E_REGEX, "e")
+        str = str.replace(ACCENT_I_REGEX, "i")
+        str = str.replace(ACCENT_O_REGEX, "o")
+        str = str.replace(ACCENT_U_REGEX, "u")
+        str = str.replace(ACCENT_Y_REGEX, "y")
+        str = str.replace(ACCENT_D_REGEX, "d")
+        str = str.replace(SPECIAL_CHARS_REGEX, "_")
+        str = str.replace(MULTI_UNDERSCORE_REGEX, "_")
+        str = str.replace(TRIM_UNDERSCORE_REGEX, "")
         return str
     }
 
@@ -647,6 +644,23 @@ abstract class MangaBox(
         private val cdnsRegex = Regex("""cdns\s*=\s*\[([^]]+)]""")
         private val backupImageRegex = Regex("""backupImage\s*=\s*\[([^]]+)]""")
         private val chapterImagesRegex = Regex("""chapterImages\s*=\s*\[([^]]+)]""")
+
+        // Hoisted out of normalizeSearchQuery(), called once per search request.
+        private val ACCENT_A_REGEX = "[àáạảãâầấậẩẫăằắặẳẵ]".toRegex()
+        private val ACCENT_E_REGEX = "[èéẹẻẽêềếệểễ]".toRegex()
+        private val ACCENT_I_REGEX = "[ìíịỉĩ]".toRegex()
+        private val ACCENT_O_REGEX = "[òóọỏõôồốộổỗơờớợởỡ]".toRegex()
+        private val ACCENT_U_REGEX = "[ùúụủũưừứựửữ]".toRegex()
+        private val ACCENT_Y_REGEX = "[ỳýỵỷỹ]".toRegex()
+        private val ACCENT_D_REGEX = "đ".toRegex()
+        private val SPECIAL_CHARS_REGEX =
+            """!|@|%|\^|\*|\(|\)|\+|=|<|>|\?|/|,|\.|:|;|'| |"|&|#|\[|]|~|-|$|_""".toRegex()
+        private val MULTI_UNDERSCORE_REGEX = "_+_".toRegex()
+        private val TRIM_UNDERSCORE_REGEX = """^_+|_+$""".toRegex()
+
+        // Hoisted out of mangaDetailsParse() description cleanup (constant subset).
+        private val BR_TAG_REGEX = """<\s*br\s*/?>""".toRegex()
+        private val HTML_TAG_REGEX = "<[^>]*>".toRegex()
 
         private val FILTER_ID_MAP = mapOf(
             Pair("newest", "all") to "1",

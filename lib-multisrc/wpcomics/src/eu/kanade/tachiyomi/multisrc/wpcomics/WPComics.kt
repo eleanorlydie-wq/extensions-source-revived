@@ -172,15 +172,6 @@ abstract class WPComics(
     protected open fun String?.toDate(): Long {
         this ?: return 0L
 
-        val secondWords = listOf("second", "giây")
-        val minuteWords = listOf("minute", "phút")
-        val hourWords = listOf("hour", "giờ")
-        val dayWords = listOf("day", "ngày")
-        val weekWords = listOf("week", "tuần")
-        val monthWords = listOf("month", "tháng")
-        val yearWords = listOf("year", "năm")
-        val agoWords = listOf("ago", "trước")
-
         return try {
             if (agoWords.any { this.contains(it, ignoreCase = true) }) {
                 val trimmedDate = this.substringBefore(" ago").removeSuffix("s").split(" ")
@@ -200,7 +191,7 @@ abstract class WPComics(
             } else {
                 (if (gmtOffset == null) this.substringAfterLast(" ") else "$this $gmtOffset").let {
                     // timestamp has year
-                    if (Regex("""\d+/\d+/\d\d""").find(it)?.value != null) {
+                    if (DATE_WITH_YEAR_REGEX.find(it)?.value != null) {
                         dateFormat.parse(it)?.time ?: 0L
                     } else {
                         // MangaSum - timestamp sometimes doesn't have year (current year implied)
@@ -217,13 +208,10 @@ abstract class WPComics(
 
     open fun imageOrNull(element: Element): String? {
         // sources sometimes have an image element with an empty attr that isn't really an image
-        fun Element.hasValidAttr(attr: String): Boolean {
-            val regex = Regex("""https?://.*""", RegexOption.IGNORE_CASE)
-            return when {
-                this.attr(attr).isNullOrBlank() -> false
-                this.attr("abs:$attr").matches(regex) -> true
-                else -> false
-            }
+        fun Element.hasValidAttr(attr: String): Boolean = when {
+            this.attr(attr).isNullOrBlank() -> false
+            this.attr("abs:$attr").matches(HTTP_URL_REGEX) -> true
+            else -> false
         }
 
         return when {
@@ -318,5 +306,19 @@ abstract class WPComics(
 
     protected open class UriPartFilter(displayName: String, private val pairs: List<Pair<String?, String>>) : Filter.Select<String>(displayName, pairs.map { it.second }.toTypedArray()) {
         fun toUriPart() = pairs[state].first
+    }
+
+    companion object {
+        // Hoisted out of String?.toDate(), called once per chapter.
+        private val secondWords = listOf("second", "giây")
+        private val minuteWords = listOf("minute", "phút")
+        private val hourWords = listOf("hour", "giờ")
+        private val dayWords = listOf("day", "ngày")
+        private val weekWords = listOf("week", "tuần")
+        private val monthWords = listOf("month", "tháng")
+        private val yearWords = listOf("year", "năm")
+        private val agoWords = listOf("ago", "trước")
+        private val DATE_WITH_YEAR_REGEX = Regex("""\d+/\d+/\d\d""")
+        private val HTTP_URL_REGEX = Regex("""https?://.*""", RegexOption.IGNORE_CASE)
     }
 }
