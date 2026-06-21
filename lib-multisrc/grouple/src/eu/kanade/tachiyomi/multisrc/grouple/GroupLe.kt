@@ -415,14 +415,13 @@ abstract class GroupLe(
         val endIndex = html.indexOf(");", beginIndex)
         val trimmedHtml = html.substring(beginIndex, endIndex)
 
-        val p = Pattern.compile("'.*?','.*?',\".*?\"")
-        val m = p.matcher(trimmedHtml)
+        val m = PAGES_PATTERN.matcher(trimmedHtml)
 
         val pages = mutableListOf<Page>()
 
         var i = 0
         while (m.find()) {
-            val urlParts = m.group().replace("[\"\']+".toRegex(), "").split(',')
+            val urlParts = m.group().replace(QUOTES_REGEX, "").split(',')
             var url = if (urlParts[1].isEmpty() && urlParts[2].startsWith("/static/")) {
                 baseUrl + urlParts[2]
             } else {
@@ -486,5 +485,7 @@ abstract class GroupLe(
         private val USER_HASH_REGEX = "user_hash.+'(.+)'".toRegex()
         private val EXTRA_REGEX = Regex("""\s*([0-9]+\sЭкстра)\s*""")
         private val SINGLE_REGEX = Regex("""\s*Сингл\s*""")
+        private val PAGES_PATTERN: Pattern = Pattern.compile("'.*?','.*?',\".*?\"")
+        private val QUOTES_REGEX = "[\"\']+".toRegex()
     }
 }
