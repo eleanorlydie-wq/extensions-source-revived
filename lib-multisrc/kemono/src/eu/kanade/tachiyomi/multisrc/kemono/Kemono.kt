@@ -28,6 +28,7 @@ import rx.Observable
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
+import java.io.IOException
 import java.lang.Thread.sleep
 import java.util.TimeZone
 import kotlin.math.min
@@ -41,6 +42,11 @@ open class Kemono(
     ConfigurableSource {
     override val supportsLatest = true
 
+    // Whether the site still serves original full-resolution files at /data/. Coomer
+    // stopped serving them (only the /thumbnail/ images on the img.* CDN load), so it
+    // overrides this to false and we request thumbnails directly.
+    open val fullResImagesAvailable: Boolean = true
+
     override val client = network.client.newBuilder()
         .addInterceptor { chain ->
             val request = chain.request()
@@ -51,21 +57,39 @@ open class Kemono(
             }
         }
         // Some sites (e.g. Coomer) no longer serve the original full-resolution
-        // files. When a full-res data request fails, transparently fall back to
+        // files: the request either returns a non-2xx response OR throws a
+        // connection failure/timeout. In both cases, transparently fall back to
         // the low-resolution thumbnail, which is still served.
         .addInterceptor { chain ->
             val request = chain.request()
             if (request.url.pathSegments.first() != dataPath) {
                 return@addInterceptor chain.proceed(request)
             }
-            val response = chain.proceed(request)
-            if (response.isSuccessful) {
-                response
-            } else {
-                response.close()
-                val thumbnailUrl = request.url.toString().toThumbnailUrl()
-                Log.e(name, "image full-res failed (HTTP ${response.code}) for ${request.url}; falling back to thumbnail $thumbnailUrl")
-                chain.proceed(request.newBuilder().url(thumbnailUrl.toHttpUrl()).build())
+            val fullRes = try {
+                chain.proceed(request)
+            } catch (e: IOException) {
+                Log.e(name, "image full-res threw ${e.javaClass.simpleName}: ${e.message} for ${request.url}")
+                null
+            }
+            val contentType = fullRes?.header("Content-Type").orEmpty()
+            if (fullRes != null && fullRes.isSuccessful && contentType.startsWith("image/")) {
+                return@addInterceptor fullRes
+            }
+            if (fullRes != null) {
+                Log.e(name, "image full-res unusable (HTTP ${fullRes.code}, type=$contentType) for ${request.url}")
+                fullRes.close()
+            }
+            val thumbnailUrl = request.url.toString().toThumbnailUrl()
+            Log.e(name, "falling back to thumbnail $thumbnailUrl")
+            try {
+                val thumb = chain.proceed(request.newBuilder().url(thumbnailUrl.toHttpUrl()).build())
+                if (!thumb.isSuccessful) {
+                    Log.e(name, "thumbnail ALSO failed HTTP ${thumb.code} for $thumbnailUrl")
+                }
+                thumb
+            } catch (e: IOException) {
+                Log.e(name, "thumbnail threw ${e.javaClass.simpleName}: ${e.message} for $thumbnailUrl")
+                throw e
             }
         }
         .apply {
@@ -314,20 +338,19 @@ open class Kemono(
     override fun imageRequest(page: Page): Request {
         val imageUrl = page.imageUrl!!
 
-        if (!preferences.getBoolean(USE_LOW_RES_IMG, false)) return GET(imageUrl, headers)
+        if (fullResImagesAvailable && !preferences.getBoolean(USE_LOW_RES_IMG, false)) {
+            return GET(imageUrl, headers)
+        }
 
         return GET(imageUrl.toThumbnailUrl(), headers)
     }
 
-    // Inserts the "/thumbnail" path segment after the host, e.g.
-    // https://coomer.st/data/x.jpg -> https://coomer.st/thumbnail/data/x.jpg
+    // The working thumbnail lives on the img.* CDN at /thumbnail/data/<path> with no
+    // query string, e.g.
+    // https://coomer.st/data/ab/cd/x.jpg?f=y.jpg -> https://img.coomer.st/thumbnail/data/ab/cd/x.jpg
     private fun String.toThumbnailUrl(): String {
-        val index = indexOf('/', 8)
-        return buildString {
-            append(this@toThumbnailUrl, 0, index)
-            append("/thumbnail")
-            append(this@toThumbnailUrl.substring(index))
-        }
+        val path = substringAfter("/$dataPath/").substringBefore('?')
+        return "$imgCdnUrl/thumbnail/$dataPath/$path"
     }
 
     override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
