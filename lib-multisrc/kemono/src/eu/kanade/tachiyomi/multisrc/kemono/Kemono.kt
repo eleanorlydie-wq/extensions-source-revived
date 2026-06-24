@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.multisrc.kemono
 
 import android.app.Application
+import android.util.Log
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import androidx.preference.SwitchPreferenceCompat
@@ -246,13 +247,24 @@ open class Kemono(
         var offset = 0
         var hasNextPage = true
         val result = ArrayList<SChapter>()
+        var totalPosts = 0
         while (offset < prefMaxPost && hasNextPage) {
-            val request = GET("$baseUrl/$apiPath${manga.url}/posts?o=$offset", headers)
-            val page: List<KemonoPostDto> = retry(request).parseAs()
+            val url = "$baseUrl/$apiPath${manga.url}/posts?o=$offset"
+            val page: List<KemonoPostDto> = retry(GET(url, headers)).parseAs()
+            totalPosts += page.size
+            val added = page.count { it.images.isNotEmpty() }
             page.forEach { post -> if (post.images.isNotEmpty()) result.add(post.toSChapter()) }
+            // Diagnostic: a page of posts that yields no chapters means the image
+            // filter (extension allow-list in KemonoPostDto.images) dropped everything;
+            // log a sample of the raw file paths so the cause is visible in the log dump.
+            if (page.isNotEmpty() && added == 0) {
+                val sample = page.take(3).map { it.debugFilePaths }
+                Log.e(name, "fetchChapterList $url: ${page.size} posts, 0 with images; paths=$sample")
+            }
             offset += PAGE_POST_LIMIT
             hasNextPage = page.size == PAGE_POST_LIMIT
         }
+        Log.e(name, "fetchChapterList ${manga.url}: posts=$totalPosts chapters=${result.size}")
         result
     }
 
@@ -263,6 +275,7 @@ open class Kemono(
             if (response.isSuccessful) return response
             response.close()
             code = response.code
+            Log.e(name, "retry ${request.url}: HTTP $code (attempt ${it + 1}/5)")
             if (code == 429) {
                 sleep(10000)
             }
