@@ -20,6 +20,7 @@ import keiyoushi.utils.getPreferences
 import keiyoushi.utils.parseAs
 import okhttp3.Cache
 import okhttp3.CacheControl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.brotli.BrotliInterceptor
@@ -47,6 +48,24 @@ open class Kemono(
                 chain.proceed(request.newBuilder().header("Accept", "text/css").build())
             } else {
                 chain.proceed(request)
+            }
+        }
+        // Some sites (e.g. Coomer) no longer serve the original full-resolution
+        // files. When a full-res data request fails, transparently fall back to
+        // the low-resolution thumbnail, which is still served.
+        .addInterceptor { chain ->
+            val request = chain.request()
+            if (request.url.pathSegments.first() != dataPath) {
+                return@addInterceptor chain.proceed(request)
+            }
+            val response = chain.proceed(request)
+            if (response.isSuccessful) {
+                response
+            } else {
+                response.close()
+                val thumbnailUrl = request.url.toString().toThumbnailUrl()
+                Log.e(name, "image full-res failed (HTTP ${response.code}) for ${request.url}; falling back to thumbnail $thumbnailUrl")
+                chain.proceed(request.newBuilder().url(thumbnailUrl.toHttpUrl()).build())
             }
         }
         .apply {
@@ -297,13 +316,18 @@ open class Kemono(
 
         if (!preferences.getBoolean(USE_LOW_RES_IMG, false)) return GET(imageUrl, headers)
 
-        val index = imageUrl.indexOf('/', 8)
-        val url = buildString {
-            append(imageUrl, 0, index)
+        return GET(imageUrl.toThumbnailUrl(), headers)
+    }
+
+    // Inserts the "/thumbnail" path segment after the host, e.g.
+    // https://coomer.st/data/x.jpg -> https://coomer.st/thumbnail/data/x.jpg
+    private fun String.toThumbnailUrl(): String {
+        val index = indexOf('/', 8)
+        return buildString {
+            append(this@toThumbnailUrl, 0, index)
             append("/thumbnail")
-            append(imageUrl.substring(index))
+            append(this@toThumbnailUrl.substring(index))
         }
-        return GET(url, headers)
     }
 
     override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
