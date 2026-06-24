@@ -70,6 +70,14 @@ class KemonoPostDto(
     private val file: KemonoFileDto,
     private val attachments: List<KemonoAttachmentDto>,
 ) {
+    // Diagnostic: raw file/attachment paths before the image extension filter,
+    // so empty chapter lists (everything filtered out) can be debugged from logs.
+    val debugFilePaths: List<String?>
+        get() = buildList(attachments.size + 1) {
+            add(file.path)
+            attachments.forEach { add(it.path) }
+        }
+
     val images: List<String>
         get() = buildList(attachments.size + 1) {
             if (file.path != null) add(KemonoAttachmentDto(file.name, file.path))
