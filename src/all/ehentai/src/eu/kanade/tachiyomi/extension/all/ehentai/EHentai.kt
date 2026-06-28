@@ -137,9 +137,22 @@ abstract class EHentai(
     }
 
     private fun parseChapterPage(response: Element) = with(response) {
-        select(".gdtm a")
-            .map {
-                Pair(it.child(0).attr("alt").toInt(), it.attr("href"))
+        // E-Hentai's thumbnail layout: <div id="gdt"> ... <a href=".../s/<token>/<gid>-<page>">
+        //   <div title="Page N: filename" style="background:url(thumb)"></div></a>
+        // (the old ".gdtm a" + child <img alt="N"> markup no longer exists). Derive the page
+        // number from the trailing "-<page>" of the /s/ link, falling back to the div title.
+        select("#gdt a")
+            .map { element ->
+                val href = element.attr("href")
+                val pageNumber = href.substringAfterLast('-').toIntOrNull()
+                    ?: element.selectFirst("div[title]")
+                        ?.attr("title")
+                        ?.substringAfter("Page ", "")
+                        ?.substringBefore(':')
+                        ?.trim()
+                        ?.toIntOrNull()
+                    ?: 0
+                Pair(pageNumber, href)
             }.sortedBy(Pair<Int, String>::first)
             .map { it.second }
     }
