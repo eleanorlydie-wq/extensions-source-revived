@@ -108,7 +108,12 @@ abstract class EHentai(
     )
 
     override fun fetchPageList(chapter: SChapter): Observable<List<Page>> {
-        val baseChapterUrl = "$baseUrl/${chapter.url}"
+        // chapter.url can carry a "?nw=always" query (added by ExGalleryMetadata.normalizeUrl).
+        // E-Hentai IGNORES the ?p= thumbnail-pagination param whenever nw=always is present: every
+        // ?p=N then returns the FIRST thumbnails page, so the page list repeats page 1's thumbnails
+        // (e.g. the same 20 pages over and over) and never reaches the later pages. The nw cookie
+        // already bypasses the content warning, so drop the query before paginating.
+        val baseChapterUrl = "$baseUrl/${chapter.url.trimStart('/')}".substringBefore('?')
         return chapterPageCall(baseChapterUrl).flatMap { response ->
             val doc = response.asJsoup()
             val firstImages = parseChapterPage(doc)
