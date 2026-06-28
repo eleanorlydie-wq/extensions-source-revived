@@ -40,7 +40,7 @@ abstract class Masonry(
     override fun popularMangaParse(response: Response): MangasPage {
         getTags()
         val document = response.asJsoup()
-        val mangas = document.select(".list-gallery:not(.static) figure:not(:has(a[href*=/video/]))")
+        val mangas = document.select(".list-gallery:not(.static) figure:not(:has(a[href*=/video/])):not(:has(video))")
             .map { element ->
                 SManga.create().apply {
                     element.selectFirst("a")!!.also {
