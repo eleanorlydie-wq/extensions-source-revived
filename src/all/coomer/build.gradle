@@ -2,8 +2,8 @@ ext {
     extName = 'Coomer'
     extClass = '.Coomer'
     themePkg = 'kemono'
-    baseUrl = 'https://coomer.st'
-    overrideVersionCode = 3
+    baseUrl = 'https://coomer.cr'
+    overrideVersionCode = 4
     isNsfw = true
 }
 
