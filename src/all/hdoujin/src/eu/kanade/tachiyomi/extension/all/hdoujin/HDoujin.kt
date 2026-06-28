@@ -126,7 +126,11 @@ class HDoujin(
                     }
                 }
             }
-            webview.loadDataWithBaseURL("$baseUrl/", " ", "text/html", null, null)
+            // Load the real site (not a blank page) so its in-page script can compute and store the
+            // `clearance` token in localStorage, which we then read below. Loading blank data never
+            // runs that script, so the token stays null and every request fails with the manual
+            // "open webview to refresh token" prompt.
+            webview.loadUrl("$baseUrl/")
         }
         latch.await(10, TimeUnit.SECONDS)
         return _clearance
