@@ -105,12 +105,38 @@ class RokuHentai :
         Filter.Header("• You must double-quote a tag if it contains spaces: parody:\"foo bar\"."),
         Filter.Header("• Filter mangas by date: after:2000-01-01 before:2000-02."),
         Filter.Header("• Negate a filter with \"-\": -language:foo."),
+        Filter.Separator(),
+        Filter.Header("Tag filters below are combined with the search box (prefix a value with - to exclude)."),
+        TagTermFilter("Tag", "tag"),
+        TagTermFilter("Parody", "parody"),
+        TagTermFilter("Character", "character"),
+        TagTermFilter("Artist", "artist"),
+        TagTermFilter("Group", "group"),
+        TagTermFilter("Language", "language"),
     )
 
+    // Tag filters are translated into the site's `namespace:value` query operators and appended to
+    // the free-text search, e.g. a Parody of "foo bar" becomes `parody:"foo bar"`.
+    internal class TagTermFilter(name: String, val namespace: String) : Filter.Text(name)
+
+    private fun buildQuery(query: String, filters: FilterList): String = buildList {
+        query.trim().takeIf(String::isNotEmpty)?.let(::add)
+        filters.filterIsInstance<TagTermFilter>().forEach { filter ->
+            var value = filter.state.trim()
+            if (value.isEmpty()) return@forEach
+            val negate = value.startsWith("-")
+            if (negate) value = value.removePrefix("-").trim()
+            if (value.isEmpty()) return@forEach
+            val quoted = if (value.any(Char::isWhitespace)) "\"$value\"" else value
+            add("${if (negate) "-" else ""}${filter.namespace}:$quoted")
+        }
+    }.joinToString(" ")
+
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val url = baseUrl.toHttpUrl().newBuilder().addQueryParameter("q", query)
+        val q = buildQuery(query, filters)
+        val url = baseUrl.toHttpUrl().newBuilder().addQueryParameter("q", q)
         if (page > 1) {
-            url.addPathSegment("_search").addQueryParameter("p", offset["search:$query"])
+            url.addPathSegment("_search").addQueryParameter("p", offset["search:$q"])
         }
         return GET(url.build(), headers)
     }
