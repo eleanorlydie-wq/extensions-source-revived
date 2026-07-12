@@ -22,7 +22,7 @@ data class Manga(
     val authors: String,
     val chapters: List<Chapter> = emptyList(),
     val cover: String,
-    @SerialName("daily_views") val dailyViews: Long?,
+    @SerialName("daily_views") val dailyViews: Long? = null,
     val description: String = "",
     val genres: String?,
     @SerialName("group_uploader") val groupUploader: Long?,
@@ -64,7 +64,7 @@ data class ListPagedManga(
 
 @Serializable
 data class MangaEntry(
-    val artists: String?,
+    val artists: String? = null,
     val authors: String,
     val cover: String,
     val description: String = "",
@@ -93,14 +93,14 @@ data class MangaEntry(
 data class Chapter(
     val chapter: Double,
     val content: String = "",
-    val hidden: Int?,
+    val hidden: Int? = null,
     val id: Long,
     @SerialName("last_update") val lastUpdate: String,
-    val manga: String?,
+    val manga: String? = null,
     val name: String?,
-    val showads: Int?,
-    val submitter: Long?,
-    val views: Long?,
+    val showads: Int? = null,
+    val submitter: Long? = null,
+    val views: Long? = null,
 ) {
     fun toSChapter(slug: String) = SChapter.create().apply {
         url = "$id/$slug-chapter-$chapter"

@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.en.templescan
 
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.network.asObservableSuccess
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
@@ -14,11 +15,12 @@ import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.lib.randomua.addRandomUAPreference
 import keiyoushi.lib.randomua.setRandomUserAgent
 import keiyoushi.network.rateLimit
-import kotlinx.serialization.json.Json
+import keiyoushi.utils.extractNextJs
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import okhttp3.Request
 import okhttp3.Response
 import rx.Observable
-import uy.kohesive.injekt.injectLazy
 import kotlin.math.min
 
 class TempleScan :
@@ -33,7 +35,7 @@ class TempleScan :
 
     override val supportsLatest = true
 
-    override val versionId = 3
+    override val versionId = 4
 
     override fun headersBuilder() = super.headersBuilder()
         .set("referer", "$baseUrl/")
@@ -44,13 +46,14 @@ class TempleScan :
         .rateLimit(1)
         .build()
 
-    private val json: Json by injectLazy()
-
     override fun fetchPopularManga(page: Int): Observable<MangasPage> = fetchSearchManga(page, "", OrderFilter.POPULAR)
 
     override fun fetchLatestUpdates(page: Int): Observable<MangasPage> = fetchSearchManga(page, "", OrderFilter.LATEST)
 
     private lateinit var seriesCache: List<BrowseSeries>
+
+    // chapter slug -> page image urls, populated by the last chapterListParse call
+    private var chapterImagesCache: Map<String, List<String>> = emptyMap()
 
     override fun fetchSearchManga(page: Int, query: String, filters: FilterList): Observable<MangasPage> {
         if (page == 1) {
@@ -65,16 +68,7 @@ class TempleScan :
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request = GET("$baseUrl/comics", headers)
 
     private fun parseSearchResponse(response: Response) {
-        val document = response.asJsoup()
-        val script = document.selectFirst("script:containsData(allComics)")!!
-            .data().unescape()
-
-        with(script) {
-            val raw = substringAfter("""allComics":""")
-                .substringBeforeLast("}]")
-
-            seriesCache = raw.parseAs()
-        }
+        seriesCache = response.extractNextJs<List<BrowseSeries>>().orEmpty()
     }
 
     private fun parseDirectory(page: Int, query: String, filters: FilterList): MangasPage {
@@ -110,9 +104,7 @@ class TempleScan :
 
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
-        val details = DETAILS_REGEX.find(document.body().outerHtml())!!.groupValues[1]
-            .unescape()
-            .parseAs<SeriesDetails>()
+        val details = document.extractNextJs<SeriesDetails>(::isSeriesData)!!
 
         val tags = mutableListOf<String>()
 
@@ -174,43 +166,57 @@ class TempleScan :
     override fun getMangaUrl(manga: SManga) = "$baseUrl${manga.url}"
 
     override fun chapterListParse(response: Response): List<SChapter> {
-        val chapters = DETAILS_REGEX.find(response.body.string())!!.groupValues[1]
-            .unescape()
-            .parseAs<ChapterList>()
+        val details = response.extractNextJs<ChapterList>(::isSeriesData)!!
         val mangaSlug = response.request.url.pathSegments.last()
 
-        return chapters.seasons.flatMap { season ->
-            season.chapters.filter {
-                it.price == 0
-            }.map { chapter ->
-                SChapter.create().apply {
-                    url = "/comic/$mangaSlug/${chapter.slug}"
-                    name = buildString {
-                        append(chapter.name)
-                        if (!chapter.title.isNullOrBlank()) {
-                            append(": ", chapter.title)
-                        }
+        val chapters = details.seasons.flatMap { it.chapters }
+        chapterImagesCache = chapters.associate { it.slug to it.images }
+
+        return chapters.filter {
+            it.price == 0
+        }.map { chapter ->
+            SChapter.create().apply {
+                url = "/comic/$mangaSlug/${chapter.slug}"
+                name = buildString {
+                    append(chapter.name)
+                    if (!chapter.title.isNullOrBlank()) {
+                        append(": ", chapter.title)
                     }
-                    date_upload = chapter.created
                 }
+                date_upload = chapter.created
             }
         }
     }
 
-    override fun pageListParse(response: Response): List<Page> = IMAGES_REGEX.find(response.body.string())!!.groupValues[1]
-        .unescape()
-        .parseAs<List<String>>()
-        .mapIndexed { index, image ->
-            Page(index, imageUrl = image)
+    // Chapter reader pages no longer embed their own image list; the full page list for
+    // every chapter is embedded on the series page instead (same payload chapterListParse
+    // reads). Use the cache populated there, falling back to a re-fetch if it's stale/empty
+    // (e.g. app restarted and this chapter was opened without visiting the manga first).
+    override fun fetchPageList(chapter: SChapter): Observable<List<Page>> {
+        val chapterSlug = chapter.url.substringAfterLast("/")
+
+        chapterImagesCache[chapterSlug]?.let { images ->
+            return Observable.just(images.mapIndexed { index, image -> Page(index, imageUrl = image) })
         }
+
+        val mangaSlug = chapter.url.removePrefix("/comic/").substringBefore("/")
+        return client.newCall(GET("$baseUrl/comic/$mangaSlug", headers))
+            .asObservableSuccess()
+            .map { response ->
+                val details = response.extractNextJs<ChapterList>(::isSeriesData)!!
+                details.seasons.flatMap { it.chapters }
+                    .firstOrNull { it.slug == chapterSlug }
+                    ?.images
+                    .orEmpty()
+                    .mapIndexed { index, image -> Page(index, imageUrl = image) }
+            }
+    }
+
+    override fun pageListParse(response: Response): List<Page> = throw UnsupportedOperationException()
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         screen.addRandomUAPreference()
     }
-
-    private fun String.unescape(): String = UNESCAPE_REGEX.replace(this, "$1")
-
-    private inline fun <reified T> String.parseAs(): T = json.decodeFromString(this)
 
     private inline fun <reified T : Filter<*>> FilterList.get(): T? = filterIsInstance<T>().firstOrNull()
 
@@ -222,6 +228,7 @@ class TempleScan :
     override fun imageUrlParse(response: Response) = throw UnsupportedOperationException()
 }
 
-private val UNESCAPE_REGEX = """\\(.)""".toRegex()
-private val DETAILS_REGEX = Regex("""info\\":(\{.*\}).*userIsFollowed""")
-private val IMAGES_REGEX = Regex("""images\\":(\[.*?]).*""")
+// The series-details object embedded in the page's Next.js payload; distinguished from other
+// objects (e.g. related-series cards) by requiring both the slug and the season/chapter list.
+private fun isSeriesData(element: JsonElement): Boolean =
+    element is JsonObject && "series_slug" in element && "Season" in element

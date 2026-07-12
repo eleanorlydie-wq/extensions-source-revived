@@ -46,7 +46,7 @@ class MangaDto(
     @JsonNames("header", "name")
     private val title: String,
     private val imageUrl: String?,
-    val isNovel: Boolean?,
+    val isNovel: Boolean? = null,
 ) {
     fun toSManga(baseUrl: String): SManga = SManga.create().apply {
         url = "/title/$titleId"

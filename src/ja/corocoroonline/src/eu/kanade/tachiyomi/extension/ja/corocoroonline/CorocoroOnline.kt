@@ -40,7 +40,7 @@ class CorocoroOnline : HttpSource() {
     override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/ranking", super.headersBuilder().add("rsc", "1").build())
 
     override fun popularMangaParse(response: Response): MangasPage {
-        val category = response.request.url.fragment ?: "総合"
+        val category = response.request.url.fragment ?: "月間総合"
         val body = response.body.string()
         val rankingLine = body.lines().firstOrNull { it.contains("\"rankingList\"") }
         val jsonStart = rankingLine?.indexOf('[').takeIf { it != -1 }
@@ -48,8 +48,8 @@ class CorocoroOnline : HttpSource() {
         val jsonArray = rankingLine?.substring(jsonStart)?.parseAs<JsonArray>()
         val container = jsonArray?.last().toString().parseAs<RscRankingContainer>()
 
-        val mangas = container.rankingList.firstOrNull { it.rankingTypeName == category }
-            ?.titles?.map { it.toSManga() }
+        val mangas = container.initialRankingLists.firstOrNull { it.tagName == category }
+            ?.rankingList?.titles?.map { it.toSManga() }
             ?: emptyList()
 
         return MangasPage(mangas, false)
@@ -226,8 +226,8 @@ class CorocoroOnline : HttpSource() {
                 Pair("日", "sun"),
                 Pair("完結", "completed"),
                 Pair("無料", "one-shot"),
-                Pair("(ランキング) 急上昇", "急上昇"),
-                Pair("(ランキング) 総合", "総合"),
+                Pair("(ランキング) 急上昇", "今日の急上昇"),
+                Pair("(ランキング) 総合", "月間総合"),
                 Pair("(ランキング) 完結", "完結"),
                 Pair("(ランキング) ギャグ・コメディ", "ギャグ・コメディ"),
                 Pair("(ランキング) バトル", "バトル"),

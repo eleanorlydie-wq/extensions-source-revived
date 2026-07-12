@@ -1,7 +1,7 @@
 ext {
     extName = 'J-Novel'
     extClass = '.JNovel'
-    extVersionCode = 4
+    extVersionCode = 5
     isNsfw = false
 }
 

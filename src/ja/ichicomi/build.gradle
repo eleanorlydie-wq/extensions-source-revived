@@ -3,7 +3,7 @@ ext {
     extClass = '.Ichicomi'
     themePkg = 'gigaviewer'
     baseUrl = 'https://ichicomi.com'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = false
 }
 

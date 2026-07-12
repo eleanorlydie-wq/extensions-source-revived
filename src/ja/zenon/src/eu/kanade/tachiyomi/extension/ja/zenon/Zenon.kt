@@ -14,7 +14,7 @@ class Zenon :
     ) {
     override val supportsLatest: Boolean = false
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/series/zenyon", headers)
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/series", headers)
 
     override val popularMangaSelector: String = ".series-item"
 

@@ -1,7 +1,7 @@
 ext {
     extName = 'KissLove'
     extClass = '.KissLove'
-    extVersionCode = 19
+    extVersionCode = 20
     isNsfw = true
 }
 

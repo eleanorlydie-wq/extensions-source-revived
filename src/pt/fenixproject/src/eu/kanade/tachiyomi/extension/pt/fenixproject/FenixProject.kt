@@ -100,7 +100,7 @@ class FenixProject :
             }
         }
 
-        if (chapterData != null && password != null) {
+        if (!chapterData.isNullOrEmpty() && !password.isNullOrEmpty()) {
             val chapterDataJson = json.parseToJsonElement(chapterData.replace("\\/", "/")).jsonObject
             val unsaltedCiphertext = Base64.decode(
                 chapterDataJson["ct"]!!.jsonPrimitive.content,
