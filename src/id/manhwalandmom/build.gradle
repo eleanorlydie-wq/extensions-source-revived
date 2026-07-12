@@ -2,8 +2,8 @@ ext {
     extName = 'ManhwaLand.mom'
     extClass = '.ManhwaLandMom'
     themePkg = 'mangathemesia'
-    baseUrl = 'https://02.manhwaland.land'
-    overrideVersionCode = 10
+    baseUrl = 'https://05c.manhwaland.land'
+    overrideVersionCode = 11
     isNsfw = true
 }
 

@@ -56,7 +56,7 @@ class IkigaiMangas :
         else -> preferences.prefBaseUrl
     }
 
-    private val defaultBaseUrl: String = "https://zonaikigai.gamesview.shop"
+    private val defaultBaseUrl: String = "https://visorikigai.gettocaboca.com"
 
     private val fetchedDomainUrl: String by lazy {
         if (!preferences.fetchDomainPref()) return@lazy preferences.prefBaseUrl

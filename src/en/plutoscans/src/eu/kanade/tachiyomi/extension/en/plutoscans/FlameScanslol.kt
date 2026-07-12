@@ -5,7 +5,7 @@ import eu.kanade.tachiyomi.multisrc.madara.Madara
 class FlameScanslol :
     Madara(
         "FlameScans.lol",
-        "https://flamescans.lol",
+        "https://flamecomics.xyz",
         "en",
     ) {
     override val id = 1001157238479601077
