@@ -2,8 +2,8 @@ ext {
     extName = 'TooniTube'
     extClass = '.TooniTube'
     themePkg = 'madtheme'
-    baseUrl = 'https://toonitube.com'
-    overrideVersionCode = 0
+    baseUrl = 'https://toondex.io'
+    overrideVersionCode = 1
     isNsfw = true
 }
 

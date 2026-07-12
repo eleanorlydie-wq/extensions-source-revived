@@ -5,6 +5,6 @@ import eu.kanade.tachiyomi.multisrc.mangathemesia.MangaThemesia
 class RizzComicUnoriginal :
     MangaThemesia(
         "Rizz Comic (unoriginal)",
-        "https://rizzcomic.com",
+        "https://rizzfables.com",
         "en",
     )

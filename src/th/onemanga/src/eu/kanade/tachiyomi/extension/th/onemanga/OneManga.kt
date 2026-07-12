@@ -15,7 +15,7 @@ import java.util.TimeZone
 class OneManga :
     MangaThemesia(
         "One-Manga",
-        "https://one-manga.com",
+        "https://mangablackcat.com",
         "th",
         dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale("th")).apply {
             timeZone = TimeZone.getTimeZone("Asia/Bangkok")
