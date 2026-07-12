@@ -32,10 +32,10 @@ class BlossomManhwa(
 
     override val supportsLatest = true
 
-    override val baseUrl = "https://api.cherrymanhwa.com"
+    override val baseUrl = "https://blossommanhwa.com"
 
-    private val apiImageUrl = "https://api.cherrymanhwa.com/v1/images"
-    private val siteUrl = "https://cherrymanhwa.com"
+    private val apiImageUrl = "https://blossommanhwa.com/v1/images"
+    private val siteUrl = "https://blossommanhwa.com"
 
     private val secretKey = "EA^UfBOF9lNdQDS3i2qAnsqxIrTpH%"
     private val encryptKey = "6dFGd4Laa3vE%kLpr5eCtSEaAL%wJm"

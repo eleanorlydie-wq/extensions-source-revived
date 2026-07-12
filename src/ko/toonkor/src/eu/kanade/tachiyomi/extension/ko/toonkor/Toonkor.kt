@@ -28,7 +28,7 @@ class Toonkor :
 
     override val name = "Toonkor"
 
-    private val defaultBaseUrl = "https://tkor114.com"
+    private val defaultBaseUrl = "https://tkor119.com"
 
     private val baseUrlPref = "overrideBaseUrl_v${AppInfo.getVersionName()}"
 

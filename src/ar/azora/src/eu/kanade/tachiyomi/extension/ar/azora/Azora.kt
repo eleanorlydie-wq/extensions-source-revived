@@ -6,7 +6,7 @@ class Azora :
     Iken(
         "Azora",
         "ar",
-        "https://azoramoon.com",
+        "https://azorafly.com",
         "https://api.azoramoon.com",
     ) {
 
