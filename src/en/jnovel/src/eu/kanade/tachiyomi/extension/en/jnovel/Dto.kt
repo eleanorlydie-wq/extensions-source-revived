@@ -98,7 +98,7 @@ class Part(
     private val launch: Time?,
     private val number: Int?,
     private val preview: Boolean?,
-    private val rental: Rental?,
+    private val rental: Rental? = null,
 ) {
     fun isLocked(owned: Boolean): Boolean = !owned && preview == false && rental == null
 

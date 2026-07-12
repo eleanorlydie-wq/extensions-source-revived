@@ -64,7 +64,7 @@ class PatchFriday : HttpSource() {
 
     // Chapters
 
-    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = client.newCall(GET("$baseUrl/search/?search=;", headers))
+    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = client.newCall(GET("$baseUrl/search/?search=", headers))
         .asObservableSuccess()
         .map { parseChapters(it) }
 
@@ -83,7 +83,7 @@ class PatchFriday : HttpSource() {
                 chapters.add(chapter)
             }
             page -= 10
-            document = client.newCall(GET("$baseUrl/search/?search=;id=$page", headers)).execute().asJsoup()
+            document = client.newCall(GET("$baseUrl/search/?search=&id=$page", headers)).execute().asJsoup()
         }
         // Add First Chapter becouse for some reason it does not show up in chapter search
         chapters.add(

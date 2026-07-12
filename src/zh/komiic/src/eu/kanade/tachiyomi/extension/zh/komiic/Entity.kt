@@ -7,12 +7,12 @@ import kotlin.time.Instant
 
 @Serializable
 class DataDto(
-    private val comics: List<MangaDto>?,
-    val allCategory: List<ItemDto>?,
-    private val searchComicsAndAuthors: DataDto?,
-    val comicById: MangaDto?,
-    val chaptersByComicId: List<ChapterDto>?,
-    val imagesByChapterId: List<PageDto>?,
+    private val comics: List<MangaDto>? = null,
+    val allCategory: List<ItemDto>? = null,
+    private val searchComicsAndAuthors: DataDto? = null,
+    val comicById: MangaDto? = null,
+    val chaptersByComicId: List<ChapterDto>? = null,
+    val imagesByChapterId: List<PageDto>? = null,
 ) {
     fun getListing(): List<MangaDto> = comics ?: searchComicsAndAuthors!!.comics!!
 }

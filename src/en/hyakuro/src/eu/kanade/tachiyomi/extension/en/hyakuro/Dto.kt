@@ -80,7 +80,7 @@ class ChapterInListDto(
     @SerialName("Chapter") val chapter: Float,
     @SerialName("Title") private val title: String?,
     @SerialName("TranslatedOn") private val translatedOn: String?,
-    @SerialName("Pages") val pages: PageListDto?,
+    @SerialName("Pages") val pages: PageListDto? = null,
 ) {
     fun toSChapter(mangaSlug: String, parent: MangaAttributes): SChapter = SChapter.create().apply {
         url = "$mangaSlug#$chapter#$id"

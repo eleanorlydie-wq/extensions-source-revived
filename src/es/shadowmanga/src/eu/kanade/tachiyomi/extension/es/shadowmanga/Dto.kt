@@ -18,10 +18,10 @@ class Series(
     val id: Int,
     @SerialName("titulo") val title: String,
     @SerialName("portadaUrl") private val thumbnailUrl: String?,
-    @SerialName("descripcion") private val description: String?,
-    @SerialName("autor") private val author: String?,
-    @SerialName("generos") private val genres: String?,
-    @SerialName("estado") private val status: String?,
+    @SerialName("descripcion") private val description: String? = null,
+    @SerialName("autor") private val author: String? = null,
+    @SerialName("generos") private val genres: String? = null,
+    @SerialName("estado") private val status: String? = null,
     @SerialName("capitulos") val chapters: List<Chapter> = emptyList(),
 ) {
     fun toSManga() = SManga.create().apply {

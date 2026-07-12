@@ -67,11 +67,11 @@ class Edge(
 class Node(
     private val id: String,
     private val title: String,
-    private val description: String?,
-    private val isCompleted: Boolean?,
-    private val coverImage: CoverImage?,
-    private val user: User?,
-    private val tags: List<Tag>?,
+    private val description: String? = null,
+    private val isCompleted: Boolean? = null,
+    private val coverImage: CoverImage? = null,
+    private val user: User? = null,
+    private val tags: List<Tag>? = null,
 ) {
     fun toSManga(): SManga = SManga.create().apply {
         url = id

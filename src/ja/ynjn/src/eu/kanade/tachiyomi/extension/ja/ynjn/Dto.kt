@@ -129,7 +129,7 @@ class ViewerData(
 
 @Serializable
 class ViewerPage(
-    @SerialName("manga_page") val mangaPage: MangaPage?,
+    @SerialName("manga_page") val mangaPage: MangaPage? = null,
 )
 
 @Serializable

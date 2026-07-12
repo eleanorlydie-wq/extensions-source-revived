@@ -264,7 +264,10 @@ class Taiyo : HttpSource() {
         val request = chain.request()
         val response = chain.proceed(request)
         return when (response.code) {
-            in arrayOf(HTTP_UNAUTHORIZED, HTTP_FORBIDDEN) -> updateTokenAndContinueRequest(request, chain)
+            in arrayOf(HTTP_UNAUTHORIZED, HTTP_FORBIDDEN) -> {
+                response.close()
+                updateTokenAndContinueRequest(request, chain)
+            }
             else -> response
         }
     }

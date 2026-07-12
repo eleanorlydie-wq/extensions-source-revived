@@ -31,7 +31,11 @@ class MangaNova : HttpSource() {
     private val defaultToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZW1icmVfaWQiOjAsIm1lbWJyZV91c2VybmFtZSI6bnVsbCwiaWF0IjoxNzA1NTc5MDQ1fQ.51qivLd2l3OKbDaYYzlntZJNnreRSBWO7p5Nsa2mAsA"
 
     override fun headersBuilder(): Headers.Builder {
-        val cookies = webViewCookieManager.getCookie(baseUrl)
+        val cookies = try {
+            webViewCookieManager.getCookie(baseUrl)
+        } catch (_: Exception) {
+            null
+        }
         var token = defaultToken
         if (cookies != null && cookies.isNotEmpty()) {
             val cookieHeaders = cookies.split("; ").toList()

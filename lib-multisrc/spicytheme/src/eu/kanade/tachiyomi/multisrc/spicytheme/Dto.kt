@@ -51,15 +51,15 @@ data class MangaDto(
     val name: String,
     val slug: String,
     val type: String,
-    @SerialName("sinopsis") val synopsis: String?,
+    @SerialName("sinopsis") val synopsis: String? = null,
     @SerialName("urlImg") val thumbnailUrl: String,
     val stateId: Int?,
-    val alternativeName: String?,
+    val alternativeName: String? = null,
     val createdAt: String?,
     @SerialName("users_count") val usersCount: Int?,
     @SerialName("chapters_count") val chaptersCount: Int?,
     @SerialName("genders") val genres: List<GenreDto>?,
-    val chapters: List<ChapterDto>?,
+    val chapters: List<ChapterDto>? = null,
 )
 
 @Serializable

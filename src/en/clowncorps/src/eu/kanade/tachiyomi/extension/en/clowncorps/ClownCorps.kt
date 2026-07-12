@@ -173,7 +173,16 @@ class ClownCorps :
 
     private fun getChapterCache() = preferences.getString(CACHE_KEY_CHAPTERS, null)
 
-    private fun setChapterCache(json: String) = preferences.edit().putString(CACHE_KEY_CHAPTERS, json).apply()
+    private fun setChapterCache(json: String) {
+        try {
+            preferences.edit().putString(CACHE_KEY_CHAPTERS, json).apply()
+        } catch (_: IllegalArgumentException) {
+            // The comic has run long enough that the full chapter list no longer
+            // fits in a single preference value. Skip caching instead of crashing
+            // the chapter list fetch; the list itself was already parsed fine.
+            clearChapterCache()
+        }
+    }
 
     private fun clearChapterCache() = preferences.edit().remove(CACHE_KEY_CHAPTERS).apply()
 

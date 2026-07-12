@@ -3,7 +3,7 @@ ext {
     extClass = '.SundayWebEvery'
     themePkg = 'gigaviewer'
     baseUrl = 'https://www.sunday-webry.com'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = true
 }
 

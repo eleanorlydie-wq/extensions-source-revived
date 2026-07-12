@@ -79,12 +79,15 @@ class ChapterDetails(
     private val name: String,
     private val subName: String?,
     private val startAt: Long,
-    private val purchaseUseCoin: Int?,
-    private val rentalUseCoin: Int?,
-    private val expirationAt: Long?,
+    private val purchaseUseCoin: Int? = null,
+    private val rentalUseCoin: Int? = null,
+    private val expirationAt: Long? = null,
 ) {
     val isLocked: Boolean
-        get() = (purchaseUseCoin != 0 || rentalUseCoin != 0) && expirationAt == null
+        get() {
+            if (purchaseUseCoin == null && rentalUseCoin == null) return false
+            return (purchaseUseCoin != 0 || rentalUseCoin != 0) && expirationAt == null
+        }
 
     fun toSChapter(): SChapter = SChapter.create().apply {
         url = "$id#$titleId"

@@ -221,8 +221,8 @@ class Book(
 
     @Serializable
     class Credit(
-        val penName: String?,
-        val bookAuthorType: String?,
+        val penName: String? = null,
+        val bookAuthorType: String? = null,
     )
 }
 

@@ -24,7 +24,7 @@ class TitleResponse(
     private val titleId: Int,
     private val titleName: String,
     private val imageUrl: String?,
-    private val maxBook: MaxBook?,
+    private val maxBook: MaxBook? = null,
 ) {
     fun toSManga() = SManga.create().apply {
         url = titleId.toString()
