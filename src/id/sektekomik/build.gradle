@@ -2,8 +2,8 @@ ext {
     extName = 'Sekte Komik'
     extClass = '.SekteKomik'
     themePkg = 'colorlibanime'
-    baseUrl = 'https://sektekomik.xyz'
-    overrideVersionCode = 26
+    baseUrl = 'https://sektekomik.id'
+    overrideVersionCode = 27
     isNsfw = false
 }
 

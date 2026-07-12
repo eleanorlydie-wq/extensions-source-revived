@@ -15,7 +15,7 @@ import rx.Observable
 class OnePunchManOnline : HttpSource() {
 
     override val name = "One Punch Man Online"
-    override val baseUrl = "https://w11.1punchman.com"
+    override val baseUrl = "https://w16.1punchman.com"
     override val lang = "en"
     override val supportsLatest = true
 

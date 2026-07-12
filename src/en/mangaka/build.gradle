@@ -2,8 +2,8 @@ ext {
     extName = 'MangaKa'
     extClass = '.MangaKa'
     themePkg = 'madara'
-    baseUrl = 'https://mangaka.cc'
-    overrideVersionCode = 0
+    baseUrl = 'https://mangaka.to'
+    overrideVersionCode = 1
     isNsfw = false
 }
 

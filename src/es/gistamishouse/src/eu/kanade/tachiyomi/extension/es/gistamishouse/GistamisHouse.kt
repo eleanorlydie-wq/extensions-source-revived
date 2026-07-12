@@ -16,7 +16,7 @@ import okhttp3.Response
 class GistamisHouse :
     ZeistManga(
         "Gistamis House",
-        "https://gistamishousefansub.blogspot.com",
+        "https://pruebaxd12g.blogspot.com",
         "es",
     ) {
     override val useNewChapterFeed = true
