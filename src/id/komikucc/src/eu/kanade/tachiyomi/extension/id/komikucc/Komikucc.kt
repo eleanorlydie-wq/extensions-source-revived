@@ -24,7 +24,7 @@ import uy.kohesive.injekt.api.get
 import java.lang.UnsupportedOperationException
 import kotlin.time.Duration.Companion.minutes
 
-const val DOMAIN = "komiku.cc"
+const val DOMAIN = "komiku.org"
 const val CDN_URL = "https://cdn.$DOMAIN/"
 
 class Komikucc : HttpSource() {

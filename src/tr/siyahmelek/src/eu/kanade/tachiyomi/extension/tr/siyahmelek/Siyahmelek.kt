@@ -5,7 +5,7 @@ import eu.kanade.tachiyomi.multisrc.initmanga.InitManga
 class Siyahmelek :
     InitManga(
         "Siyah Melek",
-        "https://siyahmelek.vip",
+        "https://siyahmelek.fun",
         "tr",
         latestUrlSlug = "recently-updated",
         popularUrlSlug = "trending-manga",

@@ -11,7 +11,7 @@ import java.util.Locale
 class StrayFansub :
     Madara(
         "Stray Fansub",
-        "https://strayfansub.net",
+        "https://strayfansub.sbs",
         "tr",
         dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale("tr")),
     ) {

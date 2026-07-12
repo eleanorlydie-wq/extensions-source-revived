@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.seconds
 class LectorMangaLat :
     Madara(
         "LectorManga.lat",
-        "https://lectormangass.com",
+        "https://lectormangass.net",
         "es",
         dateFormat = SimpleDateFormat("MMMM dd, yyyy", Locale("es")),
     ),

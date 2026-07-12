@@ -5,7 +5,7 @@ import eu.kanade.tachiyomi.multisrc.madara.Madara
 class VyvyMangaOrg :
     Madara(
         name = "VyvyManga.org",
-        baseUrl = "https://vyvymanga.org",
+        baseUrl = "https://vymanga.com",
         lang = "en",
     ) {
     override val useLoadMoreRequest = LoadMoreStrategy.Always

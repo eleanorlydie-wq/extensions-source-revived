@@ -2,8 +2,8 @@ ext {
     extName = 'Gistamis House'
     extClass = '.GistamisHouse'
     themePkg = 'zeistmanga'
-    baseUrl = 'https://gistamishousefansub.blogspot.com'
-    overrideVersionCode = 2
+    baseUrl = 'https://pruebaxd12g.blogspot.com'
+    overrideVersionCode = 3
     isNsfw = true
 }
 

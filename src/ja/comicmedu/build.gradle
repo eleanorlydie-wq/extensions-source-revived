@@ -2,8 +2,8 @@ ext {
     extName = "Comic MeDu"
     extClass = ".ComicMeDu"
     themePkg = 'comiciviewer'
-    baseUrl = "https://comic-medu.com"
-    overrideVersionCode = 0
+    baseUrl = "https://g-comi.jp"
+    overrideVersionCode = 1
     isNsfw = false
 }
 

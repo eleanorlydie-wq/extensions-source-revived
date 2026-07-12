@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.seconds
 class PirulitoRosa :
     Madara(
         "Pirulito Rosa",
-        "https://pirulitorosa.site",
+        "https://pirulitorosa.wixsite.com/pirulitorosa",
         "pt-BR",
         SimpleDateFormat("dd/MM/yyy", Locale("pt", "BR")),
     ) {
