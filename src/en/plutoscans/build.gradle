@@ -2,8 +2,8 @@ ext {
     extName = 'FlameScans.lol'
     extClass = '.FlameScanslol'
     themePkg = 'madara'
-    baseUrl = 'https://flamescans.lol'
-    overrideVersionCode = 1
+    baseUrl = 'https://flamecomics.xyz'
+    overrideVersionCode = 2
     isNsfw = false
 }
 

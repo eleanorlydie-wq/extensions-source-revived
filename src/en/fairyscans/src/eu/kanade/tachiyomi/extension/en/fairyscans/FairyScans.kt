@@ -28,7 +28,7 @@ class FairyScans :
 
     override val name = "Fairy Scans"
 
-    override val baseUrl = "https://fairyscans.com"
+    override val baseUrl = "https://fairyscans.org"
 
     override val lang = "en"
 

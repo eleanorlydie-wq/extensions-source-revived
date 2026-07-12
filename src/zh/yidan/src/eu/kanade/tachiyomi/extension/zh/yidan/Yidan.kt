@@ -49,7 +49,7 @@ class Yidan :
     override val name get() = "一耽女孩"
     override val lang get() = "zh"
     override val supportsLatest get() = true
-    private val apiUrl = "https://yd-api.hangtech.cn"
+    private val apiUrl = "https://yd-api.yidan7.club"
     override val baseUrl: String = getPreferences().run {
         val customBaseUrl = getString(PREF_KEY_CUSTOM_HOST, "")
         if (customBaseUrl.isNullOrEmpty()) {

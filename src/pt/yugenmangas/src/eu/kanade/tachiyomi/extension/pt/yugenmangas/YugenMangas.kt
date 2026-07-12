@@ -38,7 +38,7 @@ class YugenMangas :
         else -> preferences.getString(BASE_URL_PREF, defaultBaseUrl)!!
     }
 
-    private val defaultBaseUrl: String = "https://yugenmangasbr.dxtg.online"
+    private val defaultBaseUrl: String = "https://beta.taimumangas.com"
 
     private val apiUrl: String = "https://api.yugenweb.com"
 

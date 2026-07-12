@@ -32,7 +32,7 @@ class KiraKira :
     ConfigurableSource {
     override val name = "KiraKira"
     override val lang = "vi"
-    override val baseUrl = "https://truyenkira.com"
+    override val baseUrl = "https://truyenkira.net"
     override val supportsLatest = true
 
     private val apiUrl = "https://api.${baseUrl.toHttpUrl().host}"

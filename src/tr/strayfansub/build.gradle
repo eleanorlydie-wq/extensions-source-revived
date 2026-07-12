@@ -2,8 +2,8 @@ ext {
     extName = 'Stray Fansub'
     extClass = '.StrayFansub'
     themePkg = 'madara'
-    baseUrl = 'https://strayfansub.net'
-    overrideVersionCode = 4
+    baseUrl = 'https://strayfansub.sbs'
+    overrideVersionCode = 5
     isNsfw = true
 }
 

@@ -5,7 +5,7 @@ import eu.kanade.tachiyomi.multisrc.comiciviewer.ComiciViewer
 class ComicMeDu :
     ComiciViewer(
         "Comic MeDu",
-        "https://comic-medu.com",
+        "https://g-comi.jp",
         "ja",
     ) {
     override fun getFilterOptions(): List<Pair<String, String>> = listOf(

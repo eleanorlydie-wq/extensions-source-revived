@@ -19,7 +19,7 @@ import okhttp3.Response
 class KomikNesia : HttpSource() {
 
     override val name = "KomikNesia"
-    override val baseUrl = "https://02.komiknesia.asia"
+    override val baseUrl = "https://id.komiknesia.net"
     private val apiUrl = "https://api-be.komiknesia.my.id/api"
     override val lang = "id"
     override val supportsLatest = true

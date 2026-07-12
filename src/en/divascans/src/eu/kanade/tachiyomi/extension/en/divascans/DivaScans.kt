@@ -6,6 +6,6 @@ class DivaScans :
     Iken(
         "Diva Scans",
         "en",
-        "https://divatoon.com",
+        "https://divascans.org",
         "https://api.divatoon.com",
     )
