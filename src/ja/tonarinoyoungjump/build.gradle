@@ -3,7 +3,7 @@ ext {
     extClass = '.TonariNoYoungJump'
     themePkg = 'gigaviewer'
     baseUrl = 'https://tonarinoyj.jp'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = false
 }
 

@@ -3,7 +3,7 @@ ext {
     extClass = '.MangaNel'
     themePkg = 'mangahub'
     baseUrl = 'https://manganel.me'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = true
 }
 

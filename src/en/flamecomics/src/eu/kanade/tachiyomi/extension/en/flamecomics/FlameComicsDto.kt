@@ -94,17 +94,22 @@ class ChapterPageData(
 @Serializable
 class Series(
     val title: String,
-    val altTitles: List<String>?,
-    val description: String?,
+    val altTitles: List<String>? = null,
+    val description: String? = null,
     val cover: String,
     val type: String,
-    val tags: List<String>?,
-    val author: List<String>?,
-    val artist: List<String>?,
+    // "tags" was renamed to "categories" on the browse/latest endpoints, but the
+    // series detail endpoint still sends "tags". Both are absent on some payloads.
+    val tags: List<String>? = null,
+    val categories: List<String>? = null,
+    val author: List<String>? = null,
+    val artist: List<String>? = null,
     val status: String,
-    val series_id: Int?,
+    val series_id: Int? = null,
     val last_edit: Long,
-    val views: Int?,
+    // "views" was renamed to "likes"; keep both so either payload shape decodes.
+    val views: Int? = null,
+    val likes: Int? = null,
 )
 
 @Serializable

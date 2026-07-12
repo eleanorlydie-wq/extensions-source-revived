@@ -28,7 +28,7 @@ class Response(
 class Doc(
     private val iid: String,
     @SerialName("first_thumbnail_s") private val firstThumbnailS: String?,
-    @SerialName("thumbnail_sm") private val thumbnailSm: List<String>?,
+    @SerialName("thumbnail_sm") private val thumbnailSm: List<String>? = null,
     @SerialName("name_su") private val nameSu: String,
 ) {
     fun toSManga() = SManga.create().apply {

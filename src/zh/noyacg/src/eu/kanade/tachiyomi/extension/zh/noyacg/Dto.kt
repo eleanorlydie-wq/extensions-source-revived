@@ -15,15 +15,15 @@ fun String.formatNames() = split(" ").joinToString { name ->
 
 @Serializable
 class ListingPageDto(
-    val info: List<MangaDto>?,
-    val len: Int?,
+    val info: List<MangaDto>? = null,
+    val len: Int? = null,
     val status: String,
 )
 
 @Serializable
 class SearchPageDto(
-    val count: Int?,
-    val data: List<SearchMangaDto>?,
+    val count: Int? = null,
+    val data: List<SearchMangaDto>? = null,
     val status: String,
 )
 

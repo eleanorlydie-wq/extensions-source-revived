@@ -25,8 +25,8 @@ class GigaViewerPageStructure(
 
 @Serializable
 class GigaViewerPage(
-    val src: String?,
-    val type: String?,
+    val src: String? = null,
+    val type: String? = null,
 )
 
 // Chapters

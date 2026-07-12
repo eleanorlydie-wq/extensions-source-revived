@@ -15,7 +15,7 @@ class ApiResponse<T>(
 
 @Serializable
 class ApiResponseError(
-    val errors: List<ApiErrorMessages>?,
+    val errors: List<ApiErrorMessages>? = null,
 )
 
 @Serializable
