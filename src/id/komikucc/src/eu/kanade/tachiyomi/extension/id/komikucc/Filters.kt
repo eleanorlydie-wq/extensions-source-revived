@@ -1,69 +1,164 @@
 package eu.kanade.tachiyomi.extension.id.komikucc
 
 import eu.kanade.tachiyomi.source.model.Filter
-import eu.kanade.tachiyomi.source.model.FilterList
+import okhttp3.HttpUrl
 
-class SortFilter(
-    state: String? = sortValues[0].second,
+interface UriFilter {
+    fun addToUri(builder: HttpUrl.Builder)
+}
+
+open class UriPartFilter(
+    name: String,
+    private val param: String,
+    private val vals: Array<Pair<String, String>>,
 ) : Filter.Select<String>(
-    name = "Sort",
-    values = sortValues.map { it.first }.toTypedArray(),
-    state = sortValues.indexOfFirst { it.second == state }.takeIf { it != -1 } ?: 0,
-) {
-    val sort get() = sortValues[state].second
-
-    companion object {
-        val popular get() = FilterList(SortFilter("popular"))
-        val latest get() = FilterList(SortFilter("update"))
+    name,
+    vals.map { it.first }.toTypedArray(),
+),
+    UriFilter {
+    override fun addToUri(builder: HttpUrl.Builder) {
+        val selected = vals[state].second
+        if (selected.isNotEmpty()) {
+            builder.addQueryParameter(param, selected)
+        }
     }
 }
 
-private val sortValues = listOf(
-    "Semua" to null,
-    "A-Z" to "title",
-    "Z-A" to "titlereverse",
-    "Update" to "update",
-    "New" to "latest",
-    "Popular" to "popular",
+class Type : UriPartFilter("Tipe", "tipe", typeList)
+class Order : UriPartFilter("Order", "orderby", orderList)
+class Genre1 : UriPartFilter("Genre 1", "genre", genreList)
+class Genre2 : UriPartFilter("Genre 2", "genre2", genreList)
+class Status : UriPartFilter("Status", "status", statusList)
+
+private val typeList = arrayOf(
+    Pair("Semua", ""),
+    Pair("Manga", "manga"),
+    Pair("Manhua", "manhua"),
+    Pair("Manhwa", "manhwa"),
 )
 
-class StatusFilter :
-    Filter.Select<String>(
-        name = "Status",
-        values = statusValues.map { it.first }.toTypedArray(),
-    ) {
-    val status get() = statusValues[state].second
-}
-
-private val statusValues = listOf(
-    "Semua" to null,
-    "Ongoing" to "ongoing",
-    "Selesai" to "completed",
-    "Hiatus" to "hiatus",
+private val orderList = arrayOf(
+    Pair("Chapter Terbaru", "modified"),
+    Pair("Komik Terbaru", "date"),
+    Pair("Peringkat", "meta_value_num"),
+    Pair("Acak", "rand"),
 )
 
-class TypeFilter :
-    Filter.Select<String>(
-        name = "Type",
-        values = typeValues.map { it.first }.toTypedArray(),
-    ) {
-    val type get() = typeValues[state].second
-}
-
-private val typeValues = listOf(
-    "Semua" to null,
-    "Manga" to "manga",
-    "Manhwa" to "manhwa",
-    "Manhua" to "manhua",
+private val genreList = arrayOf(
+    Pair("Semua", ""),
+    Pair("Academy", "academy"),
+    Pair("Action", "action"),
+    Pair("Adaptation", "adaptation"),
+    Pair("Adult", "adult"),
+    Pair("Adventure", "adventure"),
+    Pair("apocalypse", "apocalypse"),
+    Pair("Beasts", "beasts"),
+    Pair("Blacksmith", "blacksmith"),
+    Pair("Businessman", "businessman"),
+    Pair("Comedy", "comedy"),
+    Pair("Comic", "comic"),
+    Pair("Cooking", "cooking"),
+    Pair("Crime", "crime"),
+    Pair("Crossdressing", "crossdressing"),
+    Pair("Dark Fantasy", "dark-fantasy"),
+    Pair("Demon", "demon"),
+    Pair("Demons", "demons"),
+    Pair("Doujinshi", "doujinshi"),
+    Pair("Drama", "drama"),
+    Pair("Ecchi", "ecchi"),
+    Pair("Entertainment", "entertainment"),
+    Pair("Fantasy", "fantasy"),
+    Pair("Fight", "fight"),
+    Pair("Furry", "furry"),
+    Pair("Game", "game"),
+    Pair("Gender Bender", "gender-bender"),
+    Pair("Genderswap", "genderswap"),
+    Pair("Genius", "genius"),
+    Pair("Ghosts", "ghosts"),
+    Pair("Girls' Love", "girls-love"),
+    Pair("Gore", "gore"),
+    Pair("Gyaru", "gyaru"),
+    Pair("Harem", "harem"),
+    Pair("Hentai", "hentai"),
+    Pair("Historical", "historical"),
+    Pair("Horror", "horror"),
+    Pair("Isekai", "isekai"),
+    Pair("Josei", "josei"),
+    Pair("Kids", "kids"),
+    Pair("Knight", "knight"),
+    Pair("Long Strip", "long-strip"),
+    Pair("Magic", "magic"),
+    Pair("Magical Girls", "magical-girls"),
+    Pair("Manga", "manga"),
+    Pair("Mangatoon", "mangatoon"),
+    Pair("Manhwa", "manhwa"),
+    Pair("Martial Art", "martial-art"),
+    Pair("Martial Arts", "martial-arts"),
+    Pair("Mature", "mature"),
+    Pair("MC Rebirth", "mc-rebirth"),
+    Pair("Mecha", "mecha"),
+    Pair("Medical", "medical"),
+    Pair("Military", "military"),
+    Pair("Modern", "modern"),
+    Pair("Monster", "monster"),
+    Pair("Monster girls", "monster-girls"),
+    Pair("Monsters", "monsters"),
+    Pair("Murim", "murim"),
+    Pair("Music", "music"),
+    Pair("Mystery", "mystery"),
+    Pair("Mythology", "mythology"),
+    Pair("Office Workers", "office-workers"),
+    Pair("One Shot", "one-shot"),
+    Pair("Oneshot", "oneshot"),
+    Pair("Police", "police"),
+    Pair("Psychological", "psychological"),
+    Pair("Regression", "regression"),
+    Pair("Reincarnation", "reincarnation"),
+    Pair("Revenge", "revenge"),
+    Pair("Reverse Harem", "reverse-harem"),
+    Pair("Romance", "romance"),
+    Pair("School", "school"),
+    Pair("School life", "school-life"),
+    Pair("Sci-fi", "sci-fi"),
+    Pair("Seinen", "seinen"),
+    Pair("Sexual Violence", "sexual-violence"),
+    Pair("Shotacon", "shotacon"),
+    Pair("Shoujo", "shoujo"),
+    Pair("Shoujo Ai", "shoujo-ai"),
+    Pair("Shoujo(G)", "shoujog"),
+    Pair("Shounen", "shounen"),
+    Pair("Shounen Ai", "shounen-ai"),
+    Pair("Slice of Life", "slice-of-life"),
+    Pair("Slow Life", "slow-life"),
+    Pair("Smut", "smut"),
+    Pair("Sport", "sport"),
+    Pair("Sports", "sports"),
+    Pair("Strategy", "strategy"),
+    Pair("Super Power", "super-power"),
+    Pair("Supernatural", "supernatural"),
+    Pair("Survival", "survival"),
+    Pair("Sword Fight", "sword-fight"),
+    Pair("Sword Master", "sword-master"),
+    Pair("Swormanship", "swormanship"),
+    Pair("System", "system"),
+    Pair("Thriller", "thriller"),
+    Pair("Time Travel", "time-travel"),
+    Pair("Tragedy", "tragedy"),
+    Pair("Trauma", "trauma"),
+    Pair("Vampire", "vampire"),
+    Pair("Video Games", "video-games"),
+    Pair("Villainess", "villainess"),
+    Pair("Violence", "violence"),
+    Pair("Web Comic", "web-comic"),
+    Pair("Webtoon", "webtoon"),
+    Pair("Webtoons", "webtoons"),
+    Pair("Xianxia", "xianxia"),
+    Pair("Xuanhuan", "xuanhuan"),
+    Pair("Yuri", "yuri"),
 )
 
-class CheckBoxFilter(name: String, val value: String) : Filter.CheckBox(name)
-
-class GenreFilter(
-    val genres: List<Genre>,
-) : Filter.Group<CheckBoxFilter>(
-    name = "Genres",
-    state = genres.map { CheckBoxFilter(it.title, it.link) },
-) {
-    val checked get() = state.filter { it.state }.map { it.value }
-}
+private val statusList = arrayOf(
+    Pair("Semua", ""),
+    Pair("Ongoing", "ongoing"),
+    Pair("Tamat", "end"),
+)

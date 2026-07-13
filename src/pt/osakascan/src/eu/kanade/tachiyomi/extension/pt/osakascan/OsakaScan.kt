@@ -1,10 +1,12 @@
 package eu.kanade.tachiyomi.extension.pt.osakascan
 
 import eu.kanade.tachiyomi.multisrc.zeistmanga.ZeistManga
+import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.network.rateLimit
+import okhttp3.Request
 import okhttp3.Response
 
 class OsakaScan :
@@ -17,9 +19,14 @@ class OsakaScan :
         .rateLimit(2)
         .build()
 
-    override val popularMangaSelector = "#PopularPosts2 article"
-    override val popularMangaSelectorTitle = "h3 a"
-    override val popularMangaSelectorUrl = popularMangaSelectorTitle
+    // The homepage no longer server-renders a "Popular Posts" widget; the
+    // "#trendingRow"/"#latestRow" sections are filled client-side (JS fetch)
+    // from the same Blogger JSON feed used for search/latest, ranked purely
+    // by localStorage view counts (nothing a stateless request can see).
+    // So popular falls back to the same feed API as latest/search.
+    override fun popularMangaRequest(page: Int): Request = latestUpdatesRequest(page)
+
+    override fun popularMangaParse(response: Response): MangasPage = searchMangaParse(response)
 
     override fun mangaDetailsParse(response: Response) = SManga.create().apply {
         val document = response.asJsoup()

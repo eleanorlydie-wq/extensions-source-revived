@@ -34,16 +34,15 @@ class Niceoppai : HttpSource() {
 
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangas = document.select("div.nde").mapNotNull { element ->
+        val mangas = document.select("div.fcard").mapNotNull { element ->
+            val titleElement = element.selectFirst("a.fcard__title") ?: return@mapNotNull null
             SManga.create().apply {
-                title = element.selectFirst("div.det a")?.text() ?: return@mapNotNull null
-                element.selectFirst("div.cvr a")?.let {
-                    setUrlWithoutDomain(it.attr("abs:href"))
-                }
-                thumbnail_url = element.selectFirst("div.cvr img")?.attr("abs:src")
+                title = titleElement.text()
+                setUrlWithoutDomain(titleElement.attr("abs:href"))
+                thumbnail_url = element.selectFirst("img.cover__img")?.attr("abs:src")
             }
         }
-        val hasNextPage = document.select("ul.pgg li a").last()?.text() == "Next"
+        val hasNextPage = document.select("ul.pgg li a").any { it.text() == "Next" }
         return MangasPage(mangas, hasNextPage)
     }
 
@@ -73,17 +72,23 @@ class Niceoppai : HttpSource() {
 
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
-        val infoElement = document.selectFirst("div.det") ?: return SManga.create()
-        val titleElement = document.selectFirst("h1.ttl") ?: return SManga.create()
+        val infoElement = document.selectFirst("div.series__info") ?: return SManga.create()
 
         return SManga.create().apply {
-            title = titleElement.text()
-            author = infoElement.select("p").getOrNull(2)?.selectFirst("a")?.text()
-            artist = author
-            status = infoElement.select("p").getOrNull(9)?.ownText()?.replace(": ", " ")?.let { getStatus(it) } ?: SManga.UNKNOWN
-            genre = infoElement.select("p").getOrNull(5)?.select("a")?.joinToString { it.text() }
-            description = infoElement.select("p").firstOrNull()?.ownText()?.replace(": ", " ")
-            thumbnail_url = document.selectFirst("div.mng_ifo div.cvr_ara img")?.attr("abs:src")
+            title = infoElement.selectFirst("h1")?.text() ?: ""
+            genre = infoElement.select("div.series__genres a").joinToString { it.text() }
+            description = document.selectFirst("p.series__syn")?.text()
+            thumbnail_url = document.selectFirst("div.series__cover img.cover__img")?.attr("abs:src")
+
+            document.select("div.series__facts div.fact").forEach { fact ->
+                when (fact.selectFirst("span")?.text()) {
+                    "สถานะ" -> status = fact.selectFirst("b")?.text()?.let { getStatus(it) } ?: SManga.UNKNOWN
+                    "ผู้แต่ง" -> {
+                        author = fact.selectFirst("b a")?.text() ?: fact.selectFirst("b")?.text()
+                        artist = author
+                    }
+                }
+            }
             initialized = true
         }
     }
@@ -109,30 +114,25 @@ class Niceoppai : HttpSource() {
     }
 
     private fun parseChaptersFromDocument(document: org.jsoup.nodes.Document, startIdx: Int = 0): List<SChapter> {
-        val elements = document.select("ul.lst li.lng_")
+        val elements = document.select("a.chrow")
         if (elements.isEmpty()) {
+            val fallbackUrl = document.selectFirst("div.series__cta a")?.attr("abs:href") ?: return emptyList()
             return listOf(
                 SChapter.create().apply {
+                    setUrlWithoutDomain(fallbackUrl)
                     name = "Chapter 1"
-                    chapter_number = 1.0f
+                    chapter_number = fallbackUrl.trimEnd('/').substringAfterLast('/').toFloatOrNull() ?: 1.0f
                 },
             )
         }
         return elements.mapIndexed { idx, chapter ->
             val parsedChapter = SChapter.create()
-            val btn = chapter.selectFirst("a.lst")
-            btn?.let {
-                parsedChapter.setUrlWithoutDomain(it.attr("abs:href"))
-                parsedChapter.name = it.selectFirst("b.val")?.text() ?: ""
-                parsedChapter.date_upload = parseChapterDate(it.selectFirst("b.dte")?.text())
-            }
-
-            if (parsedChapter.name.isEmpty()) {
-                parsedChapter.chapter_number = 0.0f
-            } else {
-                val wordsChapter = parsedChapter.name.replace("ตอนที่. ", "").split(" - ")
-                parsedChapter.chapter_number = wordsChapter.firstOrNull()?.toFloatOrNull() ?: (startIdx + idx + 1).toFloat()
-            }
+            parsedChapter.setUrlWithoutDomain(chapter.attr("abs:href"))
+            val number = chapter.attr("data-ch")
+            val title = chapter.selectFirst("div.chrow__t")?.text().orEmpty()
+            parsedChapter.name = if (number.isNotEmpty()) "Chapter $number${if (title.isNotEmpty()) ": $title" else ""}" else title
+            parsedChapter.date_upload = parseChapterDate(chapter.selectFirst("div.chrow__d")?.text())
+            parsedChapter.chapter_number = number.toFloatOrNull() ?: (startIdx + idx + 1).toFloat()
             parsedChapter
         }
     }

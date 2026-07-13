@@ -33,7 +33,7 @@ class MangaNova : HttpSource() {
     override fun headersBuilder(): Headers.Builder {
         val cookies = try {
             webViewCookieManager.getCookie(baseUrl)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             null
         }
         var token = defaultToken

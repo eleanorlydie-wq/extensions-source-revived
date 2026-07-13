@@ -67,13 +67,14 @@ class BaoBua : HttpSource() {
     override fun searchMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
 
-        if (document.selectFirst(".product-item") == null && document.selectFirst(".article-body") != null) {
+        if (document.selectFirst(".videodetails") != null) {
             val manga = mangaDetailsParse(document).apply {
                 val urlObj = response.request.url
                 url = urlObj.encodedPath
-                title = (document.selectFirst(".product-title") ?: document.selectFirst("h1") ?: document.selectFirst(".article-title") ?: document.selectFirst(".post-title"))?.text()?.trim()
+                title = (document.selectFirst(".c-meddenomination-output .box-mt-output") ?: document.selectFirst("h1"))?.text()?.trim()
+                    ?.removePrefix("BaoBua.Net: ")
                     ?: throw Exception("Title is mandatory")
-                thumbnail_url = (document.selectFirst("img.product-imgreal") ?: document.selectFirst(".article-body img"))?.absUrl("src")
+                thumbnail_url = document.selectFirst(".contentme img")?.absUrl("src")
                     ?.let { normalizeImageUrl(it) }
                 update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
             }
@@ -87,7 +88,7 @@ class BaoBua : HttpSource() {
     override fun mangaDetailsParse(response: Response): SManga = mangaDetailsParse(response.asJsoup())
 
     private fun mangaDetailsParse(document: Document): SManga = SManga.create().apply {
-        genre = document.select(".article-tags a").joinToString { it.text() }
+        genre = document.select(".it-cat-content a").joinToString { it.text() }
         status = SManga.COMPLETED
     }
 
@@ -114,12 +115,12 @@ class BaoBua : HttpSource() {
     override fun pageListParse(response: Response): List<Page> = recursivePageListParse(response.asJsoup())
 
     private fun recursivePageListParse(document: Document): List<Page> {
-        val pages = document.select(".article-body img")
+        val pages = document.select(".contentme img")
             .mapIndexed { index, element ->
                 Page(index, imageUrl = normalizeImageUrl(element.absUrl("src")))
             }
 
-        val nextPageUrl = document.selectFirst("a.page-numbers:contains(Next)")
+        val nextPageUrl = document.selectFirst("a.page-numbers.next")
             ?.absUrl("href")
             ?: return pages
 
@@ -141,18 +142,19 @@ class BaoBua : HttpSource() {
 
     // ========================= Helpers =========================
     private fun parseMangasPage(document: Document): MangasPage {
-        val mangas = document.select(".product-item").mapNotNull { element ->
+        val mangas = document.select(".thumb-view").mapNotNull { element ->
             SManga.create().apply {
-                val absUrl = element.selectFirst("a")?.absUrl("href") ?: return@mapNotNull null
+                val link = element.selectFirst("a.denomination") ?: return@mapNotNull null
+                val absUrl = link.absUrl("href")
                 url = absUrl.toHttpUrlOrNull()?.encodedPath ?: absUrl
-                title = element.selectFirst(".product-title")?.text() ?: return@mapNotNull null
-                thumbnail_url = element.selectFirst("img.product-imgreal")?.absUrl("src")
+                title = link.text().takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                thumbnail_url = element.selectFirst("img.xld")?.absUrl("src")
                     ?.let { normalizeImageUrl(it) }
                 update_strategy = UpdateStrategy.ONLY_FETCH_ONCE
             }
         }
 
-        val hasNextPage = document.selectFirst(".pagination-custom .nextPage") != null
+        val hasNextPage = document.selectFirst(".pagination-site a.page-numbers.next") != null
 
         return MangasPage(mangas, hasNextPage)
     }
