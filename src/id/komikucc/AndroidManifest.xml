@@ -11,9 +11,9 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
 
-                <data android:host="komiku.cc" />
+                <data android:host="komiku.org" />
                 <data android:scheme="https" />
-                <data android:pathPattern="/komik/..*" />
+                <data android:pathPattern="/manga/..*" />
             </intent-filter>
         </activity>
     </application>

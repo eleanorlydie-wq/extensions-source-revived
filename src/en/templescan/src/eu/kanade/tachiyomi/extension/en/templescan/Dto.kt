@@ -62,13 +62,27 @@ class ChapterList(
             @SerialName("chapter_slug") val slug: String,
             val price: Int,
             @SerialName("created_at") private val createdAt: String? = null,
+            @SerialName("chapter_data") private val chapterData: ChapterData? = null,
         ) {
             val created: Long by lazy {
                 dateFormat.tryParse(createdAt)
             }
+
+            val images: List<String>
+                get() = chapterData?.images?.map { it.url } ?: emptyList()
         }
     }
 }
+
+@Serializable
+class ChapterData(
+    val images: List<ChapterImage> = emptyList(),
+)
+
+@Serializable
+class ChapterImage(
+    val url: String,
+)
 
 private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH)
 

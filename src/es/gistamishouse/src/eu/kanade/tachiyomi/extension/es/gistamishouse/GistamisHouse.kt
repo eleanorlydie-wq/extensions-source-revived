@@ -31,6 +31,12 @@ class GistamisHouse :
 
     override val popularMangaSelector = "div.PopularPosts div.grid > figure:not(:has(span[data=Capitulo]))"
 
+    // The site's homepage "PopularPosts" widget is client-side (JS/AJAX) rendered and is
+    // empty in the static HTML (blog has no accumulated pageview stats yet), so fall back
+    // to the Blogger feed API used by latest updates, like other ZeistManga sources do.
+    override fun popularMangaRequest(page: Int) = latestUpdatesRequest(page)
+    override fun popularMangaParse(response: Response) = latestUpdatesParse(response)
+
     override val authorSelectorList = listOf(
         "Author",
         "Autor",
@@ -94,7 +100,7 @@ class GistamisHouse :
             ?: throw Exception("Failed to parse from chapter API")
     }
 
-    override val pageListSelector = "article.oh div.post p"
+    override val pageListSelector = "article.oh div.post"
 
     override fun getGenreList(): List<Genre> = listOf(
         Genre("Acción", "Acción"),

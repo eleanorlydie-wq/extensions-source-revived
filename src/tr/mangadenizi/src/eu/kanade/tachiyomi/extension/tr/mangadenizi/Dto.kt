@@ -1,6 +1,5 @@
 package eu.kanade.tachiyomi.extension.tr.mangadenizi
 
-import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import keiyoushi.utils.tryParse
@@ -12,8 +11,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.text.SimpleDateFormat
 
 @Serializable
-class InertiaDto<T>(
-    val props: T,
+class ApiResponseDto<T>(
+    val data: T,
 )
 
 @Serializable
@@ -82,16 +81,4 @@ class ChapterDto(
         name = "Bölüm $numberStr" + (if (title.isNullOrBlank()) "" else ": $title")
         date_upload = dateFormat.tryParse(publishedAt)
     }
-}
-
-@Serializable
-class ReaderDto(
-    val pages: List<ReaderPageDto>,
-)
-
-@Serializable
-class ReaderPageDto(
-    @SerialName("image_url") private val url: String,
-) {
-    fun toPage(index: Int) = Page(index, imageUrl = url)
 }

@@ -3,7 +3,7 @@ ext {
     extClass = '.ComicYours'
     themePkg = 'gigaviewer'
     baseUrl = 'https://comic-y-ours.com'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = false
 }
 

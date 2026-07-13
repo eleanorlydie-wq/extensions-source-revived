@@ -55,7 +55,13 @@ class MangaFox : HttpSource() {
                 }
 
                 override fun loadForRequest(url: HttpUrl): List<Cookie> {
-                    val cookies = cookieManager.getCookie(url.toString())
+                    // Some WebView-less environments don't implement getCookie and throw
+                    // instead of returning null, so guard against that as well.
+                    val cookies = try {
+                        cookieManager.getCookie(url.toString())
+                    } catch (_: Throwable) {
+                        null
+                    }
 
                     return if (cookies != null && cookies.isNotEmpty()) {
                         cookies.split(";").mapNotNull {

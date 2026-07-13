@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.utils.jsonInstance
 import keiyoushi.utils.parseAs
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -135,18 +136,35 @@ class LesPoroiniens :
             return jsonString
         }
 
-        if (element is JsonObject && element["chapters"] is JsonArray) {
-            val chapters = element["chapters"] as JsonArray
+        if (element !is JsonObject) return jsonString
+
+        val mutableMap = element.toMutableMap()
+        var changed = false
+
+        val chapters = element["chapters"]
+        if (chapters is JsonArray) {
             val chaptersMap = JsonObject(
                 chapters.mapIndexed { index, item ->
                     (index + 1).toString() to item
                 }.toMap(),
             )
-            return JsonObject(
-                element.toMutableMap().also { it["chapters"] = chaptersMap },
-            ).toString()
+            mutableMap["chapters"] = chaptersMap
+            changed = true
         }
 
-        return jsonString
+        // The API omits "cover_low"/"cover_hq" entirely for every series
+        // (only "cover" is sent), but SeriesData declares them as
+        // non-defaulted fields, causing MissingFieldException. Backfill
+        // them with null so parsing succeeds.
+        if ("cover_low" !in mutableMap) {
+            mutableMap["cover_low"] = JsonNull
+            changed = true
+        }
+        if ("cover_hq" !in mutableMap) {
+            mutableMap["cover_hq"] = JsonNull
+            changed = true
+        }
+
+        return if (changed) JsonObject(mutableMap).toString() else jsonString
     }
 }

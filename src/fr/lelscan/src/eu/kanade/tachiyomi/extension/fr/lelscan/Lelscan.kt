@@ -27,7 +27,9 @@ class Lelscan : HttpSource() {
 
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangas = document.select("#navigation select").first()
+        // #header-image holds two <select> dropdowns: [0] chapter numbers for the
+        // current manga, [1] the full manga catalog (used here).
+        val mangas = document.select("#header-image select").getOrNull(1)
             ?.select("option")
             ?.map { option ->
                 SManga.create().apply {
@@ -68,7 +70,7 @@ class Lelscan : HttpSource() {
     override fun searchMangaParse(response: Response): MangasPage {
         val query = response.request.url.fragment.orEmpty()
         val document = response.asJsoup()
-        val mangas = document.select("#navigation select").first()
+        val mangas = document.select("#header-image select").getOrNull(1)
             ?.select("option")
             ?.filter { it.text().contains(query, ignoreCase = true) }
             ?.map { option ->
@@ -101,8 +103,8 @@ class Lelscan : HttpSource() {
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
-        // The second <select> in #navigation is the chapter dropdown (descending order).
-        return document.select("#navigation select").getOrNull(1)
+        // The first <select> in #header-image is the chapter dropdown (descending order).
+        return document.select("#header-image select").getOrNull(0)
             ?.select("option")
             ?.map { option ->
                 val chapterNum = option.text().toFloatOrNull() ?: -1f
@@ -122,12 +124,13 @@ class Lelscan : HttpSource() {
 
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
-        return document.select("#navigation select").getOrNull(2)
-            ?.select("option")
-            ?.mapIndexed { index, option ->
-                Page(index, url = option.attr("abs:value"))
+        // #navigation on a chapter reader page is a "Prec 1 2 3 ... Suiv" pagination bar
+        // (no <select> here); keep only the numbered links to get one URL per page.
+        return document.select("#navigation a")
+            .filter { it.text().toIntOrNull() != null }
+            .mapIndexed { index, a ->
+                Page(index, url = a.attr("abs:href"))
             }
-            .orEmpty()
     }
 
     override fun imageUrlParse(response: Response): String = response.asJsoup().selectFirst("#image img")?.attr("abs:src").orEmpty()

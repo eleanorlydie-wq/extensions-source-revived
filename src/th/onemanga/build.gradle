@@ -3,7 +3,7 @@ ext {
     extClass = '.OneManga'
     themePkg = 'mangathemesia'
     baseUrl = 'https://mangablackcat.com'
-    overrideVersionCode = 1
+    overrideVersionCode = 2
     isNsfw = true
 }
 

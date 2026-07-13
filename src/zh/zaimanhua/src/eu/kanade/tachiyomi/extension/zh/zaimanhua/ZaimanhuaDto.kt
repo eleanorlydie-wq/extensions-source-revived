@@ -137,9 +137,9 @@ class PageItemDto(
     // Ranking(/comic/rank/list) only have `comic_id`
     // latest(/comic/update/list) have both `id` (always 0) and `comic_id`
     // Search(/search/index) have both `id` and `comic_id` (always 0)
-    private val id: Int?,
+    private val id: Int? = null,
     @SerialName("comic_id")
-    private val comicId: Int?,
+    private val comicId: Int? = null,
     // Only genre(/comic/filter/list) use `name`, others use `title`
     @JsonNames("name")
     private val title: String,

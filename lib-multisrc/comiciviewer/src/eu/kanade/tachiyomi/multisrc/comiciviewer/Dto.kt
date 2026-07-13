@@ -120,16 +120,20 @@ class Episode(
     val datePublished: Long,
 )
 
+// A nullable type is not the same as an optional key: without a default, kotlinx.serialization
+// still throws MissingFieldException when the key is simply absent from the JSON (as opposed to
+// present-and-null). The description tree omits whichever of these it doesn't need per node, so
+// every one needs a default or opening any title throws.
 @Serializable
 class DescriptionNode(
-    val children: List<DescriptionChild>,
+    val children: List<DescriptionChild> = emptyList(),
 )
 
 @Serializable
 class DescriptionChild(
-    val text: String?,
-    val url: String?,
-    val children: List<DescriptionChild>?,
+    val text: String? = null,
+    val url: String? = null,
+    val children: List<DescriptionChild>? = null,
 ) {
     fun resolveText(): String? = when {
         text != null -> text

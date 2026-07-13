@@ -122,7 +122,7 @@ class FlameComics : HttpSource() {
         )
     }
 
-    override fun popularMangaParse(response: Response): MangasPage = mangaParse(response) { list -> list.sortedByDescending { it.views } }
+    override fun popularMangaParse(response: Response): MangasPage = mangaParse(response) { list -> list.sortedByDescending { it.views ?: it.likes ?: 0 } }
 
     private fun mangaParse(
         response: Response,
@@ -180,7 +180,7 @@ class FlameComics : HttpSource() {
         description = seriesData.description
             ?.let { Jsoup.parseBodyFragment(it).wholeText() }
 
-        genre = seriesData.tags?.let { tags ->
+        genre = (seriesData.tags ?: seriesData.categories)?.let { tags ->
             (listOf(seriesData.type) + tags).joinToString()
         } ?: seriesData.type
 

@@ -32,13 +32,16 @@ class SleptManga : HttpSource() {
 
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val elements = document.select("a.group:has(article)")
+        val elements = document.select("div.group:has(h3)")
 
         val mangas = elements
-            .filterNot { it.absUrl("href").toHttpUrlOrNull()?.pathSegments?.firstOrNull() == "novel" }
+            .filterNot {
+                it.selectFirst("a[href]")?.absUrl("href")?.toHttpUrlOrNull()?.pathSegments?.firstOrNull() == "novel"
+            }
             .mapNotNull { element ->
+                val href = element.selectFirst("a[href]")?.absUrl("href") ?: return@mapNotNull null
                 SManga.create().apply {
-                    setUrlWithoutDomain(element.absUrl("href"))
+                    setUrlWithoutDomain(href)
                     title = element.selectFirst("h3")?.text()?.takeIf { it.isNotEmpty() }
                         ?: element.selectFirst("img")?.attr("alt")?.takeIf { it.isNotEmpty() }
                         ?: return@mapNotNull null

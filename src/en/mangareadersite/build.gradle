@@ -3,7 +3,7 @@ ext {
     extClass = '.MangaReaderSite'
     themePkg = 'mangahub'
     baseUrl = 'https://mangareader.site'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = false
 }
 

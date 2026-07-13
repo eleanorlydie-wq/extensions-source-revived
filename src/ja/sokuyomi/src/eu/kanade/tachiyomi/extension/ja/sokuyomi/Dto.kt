@@ -113,8 +113,8 @@ class Node(
 
 @Serializable
 class TitleCover(
-    val key: String?,
-    @SerialName("origin_key") val originKey: String?,
+    val key: String? = null,
+    @SerialName("origin_key") val originKey: String? = null,
 )
 
 @Serializable
