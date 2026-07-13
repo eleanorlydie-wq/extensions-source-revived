@@ -42,7 +42,7 @@ class SearchResponse(
 class Titles(
     val titleId: String,
     val name: String,
-    private val lastPublication: LastPublication?,
+    private val lastPublication: LastPublication? = null,
 ) {
     fun toSManga(cdnUrl: String) = SManga.create().apply {
         url = titleId

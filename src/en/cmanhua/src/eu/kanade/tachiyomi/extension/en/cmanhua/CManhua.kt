@@ -14,22 +14,17 @@ import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.utils.firstInstanceOrNull
 import keiyoushi.utils.jsonInstance
-import keiyoushi.utils.toJsonRequestBody
 import keiyoushi.utils.tryParse
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
-import okhttp3.HttpUrl
+import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.TimeZone
 
 class CManhua : HttpSource() {
 
@@ -43,52 +38,57 @@ class CManhua : HttpSource() {
 
     // ============================== Popular =====================================
 
-    override fun popularMangaRequest(page: Int): Request = listRequest(page, sort = SORT_TOP_VIEWS)
+    override fun popularMangaRequest(page: Int): Request = browseRequest(orderBy = ORDER_VIEWS)
 
-    override fun popularMangaParse(response: Response): MangasPage = parseMangaList(response)
+    override fun popularMangaParse(response: Response): MangasPage = parseMangaList(applyBrowseFilters(response))
 
     // ============================== Latest ======================================
 
-    override fun latestUpdatesRequest(page: Int): Request = listRequest(page, sort = SORT_UPDATE_TIME)
+    override fun latestUpdatesRequest(page: Int): Request = browseRequest(orderBy = ORDER_UPDATED)
 
-    override fun latestUpdatesParse(response: Response): MangasPage = parseMangaList(response)
+    override fun latestUpdatesParse(response: Response): MangasPage = parseMangaList(applyBrowseFilters(response))
 
     // ============================== Search ======================================
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         if (query.isNotBlank()) {
-            return searchRequest(page, query.trim())
+            val url = baseUrl.toHttpUrl().newBuilder()
+                .addPathSegments("Modules/Search/SearchHandler.ashx")
+                .addQueryParameter("q", query.trim())
+                .build()
+
+            return GET(url, headers)
         }
 
         val status = filters.firstInstanceOrNull<StatusFilter>()?.toUriPart() ?: STATUS_OPTIONS.first().second
         val sort = filters.firstInstanceOrNull<SortFilter>()?.toUriPart() ?: SORT_OPTIONS.first().second
-        val minChapters = filters.firstInstanceOrNull<ChapterCountFilter>()?.toUriPart() ?: CHAPTER_OPTIONS.first().second
-        val gender = filters.firstInstanceOrNull<GenderFilter>()?.toUriPart() ?: GENDER_OPTIONS.first().second
-        val genres = filters.firstInstanceOrNull<GenreFilter>()?.state?.filter { it.state }?.joinToString { it.id } ?: ""
+        val minChapters = filters.firstInstanceOrNull<ChapterCountFilter>()?.state?.ifBlank { "0" } ?: "0"
+        val genreIndexes = filters.firstInstanceOrNull<GenreFilter>()?.state
+            ?.withIndex()
+            ?.filter { (_, genre) -> genre.state }
+            ?.joinToString(",") { (index, _) -> index.toString() }
+            .orEmpty()
 
-        return listRequest(
-            page = page,
-            sort = sort,
-            status = status,
-            minChapters = minChapters,
-            gender = gender,
-            genres = genres,
-        )
+        return browseRequest(orderBy = sort, status = status, minChapters = minChapters, genreIndexes = genreIndexes)
     }
 
-    override fun searchMangaParse(response: Response): MangasPage = parseMangaList(response)
+    override fun searchMangaParse(response: Response): MangasPage = if (response.request.url.encodedPath.contains("SearchHandler.ashx")) {
+        parseSearchResults(response)
+    } else {
+        parseMangaList(applyBrowseFilters(response))
+    }
 
     // ============================== Manga Details ===============================
 
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
         return SManga.create().apply {
-            title = document.selectFirst("h1.title-detail")?.text() ?: throw Exception("Title not found")
-            author = document.select("li.author p.col-xs-8 a").joinToString { it.text() }
-            status = document.selectFirst("li.status p.col-xs-8")?.text().orEmpty().toStatus()
-            genre = document.select("li.kind p.col-xs-8 a").joinToString { it.text() }
-            description = document.selectFirst("#descript")?.text()
-            thumbnail_url = document.selectFirst("div.col-image img")?.absUrl("src")
+            title = document.selectFirst("#MainContent_lblTitle")?.text() ?: throw Exception("Title not found")
+            author = document.selectFirst("#MainContent_lblAuthor")?.text()
+            status = document.selectFirst("#MainContent_lblStatus")?.text().orEmpty().toStatus()
+            genre = document.select("span.cd-tag").joinToString { it.text() }
+            description = document.selectFirst("#MainContent_lblDescription")?.text()
+            thumbnail_url = document.selectFirst("#MainContent_imgCover")?.absUrl("src")
         }
     }
 
@@ -96,10 +96,10 @@ class CManhua : HttpSource() {
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
-        return document.select("#listchap li.row").map { element ->
-            val link = element.selectFirst("div.chapter a") ?: throw Exception("Chapter link not found")
-            val name: String = link.text()
-            val date: String = element.selectFirst("time[datetime]")?.attr("datetime").orEmpty()
+        return document.select("li.cd-chapter-item").map { element ->
+            val link = element.selectFirst("a.cd-chapter-link") ?: throw Exception("Chapter link not found")
+            val name: String = link.text().trim()
+            val date: String = element.selectFirst("span.text-muted")?.text()?.trim().orEmpty()
 
             SChapter.create().apply {
                 this.name = name
@@ -114,13 +114,10 @@ class CManhua : HttpSource() {
 
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
-        val encoded: String = document.select("script")
-            .asSequence()
-            .mapNotNull { CHAPTER_TOKEN_REGEX.find(it.data())?.groupValues?.get(1) }
-            .firstOrNull()
-            ?: throw Exception("Unable to find chapter token")
-
-        return fetchChapterPages(encoded, response.request.url.toString())
+        return document.select("img.chapter-image").mapIndexedNotNull { index, image ->
+            val src = image.attr("abs:data-src").ifEmpty { image.absUrl("src") }
+            if (src.isEmpty()) null else Page(index, imageUrl = src)
+        }
     }
 
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException("Not used")
@@ -134,29 +131,25 @@ class CManhua : HttpSource() {
         SortFilter(),
         StatusFilter(),
         ChapterCountFilter(),
-        GenderFilter(),
         GenreFilter(GENRES),
     )
 
     // ============================== Request Builders ============================
 
-    private fun listRequest(
-        page: Int,
-        sort: String,
+    private fun browseRequest(
+        orderBy: String,
         status: String = STATUS_OPTIONS.first().second,
-        minChapters: String = CHAPTER_OPTIONS.first().second,
-        gender: String = GENDER_OPTIONS.first().second,
-        genres: String = "",
+        minChapters: String = "0",
+        genreIndexes: String = "",
     ): Request {
         val url = baseUrl.toHttpUrl().newBuilder()
-            .addPathSegments("danhsach/P$page/index.html")
+            .addPathSegment("Browse")
+            .addQueryParameter("orderBy", orderBy)
             .addQueryParameter("status", status)
-            .addQueryParameter("sort", sort)
-            .addQueryParameter("chapter", minChapters)
-            .addQueryParameter("gender", gender)
+            .addQueryParameter("minChapters", minChapters)
             .apply {
-                if (genres.isNotEmpty()) {
-                    addQueryParameter("spec", genres)
+                if (genreIndexes.isNotEmpty()) {
+                    addQueryParameter("genres", genreIndexes)
                 }
             }
             .build()
@@ -164,49 +157,65 @@ class CManhua : HttpSource() {
         return GET(url, headers)
     }
 
-    private fun searchRequest(page: Int, query: String): Request {
-        val url = baseUrl.toHttpUrl().newBuilder()
-            .addPathSegment(query)
-            .apply {
-                if (page > 1) {
-                    addPathSegment("P$page")
-                }
-            }
-            .addPathSegment("tim-kiem.html")
-            .build()
+    /**
+     * cmanhua.com's /Browse listing is an ASP.NET WebForms page: the sort/status/genre controls
+     * only take effect through a postback (the query string used to build the initial request is
+     * otherwise ignored by the server). This performs that postback using the __VIEWSTATE /
+     * __EVENTVALIDATION tokens from the page we just fetched, re-reading our own desired filter
+     * values back out of that request's query string.
+     *
+     * Only the first rendered page is supported: paging beyond it is driven by further postbacks
+     * (rptPager link clicks) that depend on the *previous* page's fresh viewstate, which this
+     * stateless request/parse cycle has no way to chain reliably.
+     */
+    private fun applyBrowseFilters(initialResponse: Response): Response {
+        val requestUrl = initialResponse.request.url
+        val orderBy = requestUrl.queryParameter("orderBy") ?: ORDER_UPDATED
+        val status = requestUrl.queryParameter("status").orEmpty()
+        val minChapters = requestUrl.queryParameter("minChapters")?.ifBlank { "0" } ?: "0"
+        val genreIndexes = requestUrl.queryParameter("genres")
+            ?.split(",")
+            ?.mapNotNull { it.toIntOrNull() }
+            .orEmpty()
 
-        return GET(url, headers)
-    }
+        val document = initialResponse.asJsoup()
+        val viewState = document.selectFirst("input#__VIEWSTATE")?.attr("value")
+            ?: throw Exception("Unable to load browse page (missing view state)")
+        val viewStateGenerator = document.selectFirst("input#__VIEWSTATEGENERATOR")?.attr("value").orEmpty()
+        val eventValidation = document.selectFirst("input#__EVENTVALIDATION")?.attr("value")
+            ?: throw Exception("Unable to load browse page (missing event validation)")
 
-    private fun chapterApiRequest(encoded: String, referer: String): Request {
-        val body = buildJsonObject {
-            put("enc", encoded)
-        }.toJsonRequestBody()
+        val formBuilder = FormBody.Builder()
+            .add("__EVENTTARGET", "ctl00\$MainContent\$btnSearch")
+            .add("__EVENTARGUMENT", "")
+            .add("__VIEWSTATE", viewState)
+            .add("__VIEWSTATEGENERATOR", viewStateGenerator)
+            .add("__EVENTVALIDATION", eventValidation)
+            .add("ctl00\$MainContent\$txtMinChap", minChapters)
+            .add("ctl00\$MainContent\$ddlStatus", status)
+            .add("ctl00\$MainContent\$ddlOrderBy", orderBy)
+            .add("ctl00\$MainContent\$ddlLang", "")
 
-        return POST(
-            "$baseUrl/Service.asmx/getchapter",
-            headersBuilder()
-                .add("X-Requested-With", "XMLHttpRequest")
-                .set("Referer", referer)
-                .build(),
-            body,
-        )
+        for (index in genreIndexes) {
+            val genre = GENRES.getOrNull(index) ?: continue
+            formBuilder.add("ctl00\$MainContent\$chkGenres\$$index", genre.id)
+        }
+
+        val browseUrl = "$baseUrl/Browse"
+        val request = POST(browseUrl, headersBuilder().set("Referer", browseUrl).build(), formBuilder.build())
+        return client.newCall(request).execute()
     }
 
     // ============================== Utilities ===================================
 
     private fun parseMangaList(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangaList = document.select("ul.lst_story li.item").mapNotNull { element ->
-            val titleElement = element.selectFirst("h3 a") ?: element.selectFirst("a[itemprop=url]")
-
-            val url: String = titleElement?.absUrl("href") ?: return@mapNotNull null
+        val mangaList = document.select("div.col > a:has(div.comic-card)").mapNotNull { anchor ->
+            val url: String = anchor.absUrl("href")
             if (url.isEmpty()) return@mapNotNull null
 
-            val title: String = titleElement.text()
-            val thumbnail: String = element.selectFirst("img")?.let { image ->
-                image.absUrl("data-src").ifEmpty { image.absUrl("src") }
-            }.orEmpty()
+            val title: String = anchor.selectFirst("div.comic-title")?.text() ?: return@mapNotNull null
+            val thumbnail: String = anchor.selectFirst("img")?.absUrl("src").orEmpty()
 
             SManga.create().apply {
                 this.title = title
@@ -217,110 +226,50 @@ class CManhua : HttpSource() {
             }
         }
 
-        val page = pageFromUrl(response.request.url)
-        val hasNextPage = hasNextPage(document, page)
-        return MangasPage(mangaList, hasNextPage)
+        // See applyBrowseFilters: only the first postback-rendered page is supported.
+        return MangasPage(mangaList, false)
     }
 
-    private fun pageFromUrl(url: HttpUrl): Int {
-        val pageSegment = url.pathSegments.firstOrNull { it.startsWith("P") && it.length > 1 }
-        return pageSegment?.substring(1)?.toIntOrNull() ?: 1
-    }
+    private fun parseSearchResults(response: Response): MangasPage {
+        val body = response.body.string()
+        val jsonElement = runCatching { jsonInstance.parseToJsonElement(body) }.getOrNull()
+        val results = jsonElement as? JsonArray ?: return MangasPage(emptyList(), false)
 
-    private fun hasNextPage(document: Document, page: Int): Boolean {
-        val maxPage = document.select("li.list-pager a")
-            .mapNotNull { it.text().toIntOrNull() }
-            .maxOrNull()
-            ?: return false
+        val mangaList = results.mapNotNull { element ->
+            val obj = element as? JsonObject ?: return@mapNotNull null
+            val slug = obj["slug"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            val title = obj["title"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+            val cover = obj["cover"]?.jsonPrimitive?.contentOrNull.orEmpty()
 
-        return page < maxPage
-    }
-
-    private fun fetchChapterPages(encoded: String, referer: String): List<Page> {
-        val request = chapterApiRequest(encoded, referer)
-        return client.newCall(request).execute().use { response ->
-            val body = response.body.string()
-            val data = extractChapterPayload(body)
-            val code = data.trim().toIntOrNull()
-            if (code != null) {
-                throw Exception(errorMessage(code))
-            }
-
-            Jsoup.parseBodyFragment(data, baseUrl).select("img").mapIndexed { index, image ->
-                Page(index, imageUrl = image.absUrl("src"))
+            SManga.create().apply {
+                this.title = title
+                if (cover.isNotEmpty()) {
+                    thumbnail_url = if (cover.startsWith("http")) cover else baseUrl + cover
+                }
+                setUrlWithoutDomain("/comic/$slug")
             }
         }
-    }
 
-    private fun extractChapterPayload(body: String): String {
-        val trimmed = body.trim().removePrefix("\uFEFF")
-        if (trimmed.isEmpty()) {
-            throw Exception("Failed to load chapter pages.")
-        }
-        if (trimmed.startsWith("<") || trimmed.contains("<img", ignoreCase = true)) {
-            return trimmed
-        }
-
-        val jsonElement = runCatching { jsonInstance.parseToJsonElement(trimmed) }.getOrNull()
-            ?: throw Exception(errorMessageFromBody(trimmed))
-
-        if (jsonElement !is JsonObject) {
-            return jsonElement.jsonPrimitive.contentOrNull
-                ?: throw Exception(errorMessageFromBody(trimmed))
-        }
-
-        val data: String = jsonElement["d"]?.jsonPrimitive?.contentOrNull
-            ?: jsonElement["data"]?.jsonPrimitive?.contentOrNull
-            ?: jsonElement["html"]?.jsonPrimitive?.contentOrNull
-            ?: throw Exception(errorMessageFromBody(trimmed))
-
-        return data
-    }
-
-    private fun errorMessageFromBody(body: String): String {
-        val code = body.trim().toIntOrNull()
-        if (code != null) {
-            return errorMessage(code)
-        }
-
-        val jsonObject = runCatching { jsonInstance.parseToJsonElement(body) }.getOrNull() as? JsonObject
-        val error = jsonObject
-            ?.get("error")
-            ?.jsonPrimitive
-            ?.contentOrNull
-
-        return error ?: "Failed to load chapter pages. Unknown error."
+        return MangasPage(mangaList, false)
     }
 
     // ============================== Helpers =====================================
 
     private fun String.toStatus(): Int = when (lowercase(Locale.ROOT)) {
-        "on going", "ongoing" -> SManga.ONGOING
+        "ongoing" -> SManga.ONGOING
         "completed" -> SManga.COMPLETED
+        "hiatus" -> SManga.ON_HIATUS
         else -> SManga.UNKNOWN
     }
 
     private fun parseChapterNumber(name: String): Float = CHAPTER_NUMBER_REGEX.find(name)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: -1f
 
-    private fun errorMessage(code: Int): String = when (code) {
-        3 -> "You do not have enough coins to unlock this chapter."
-        -1 -> "Chapter does not exist."
-        -2 -> "Chapter token expired."
-        -3 -> "Invalid parameters."
-        -4 -> "Login required to access this chapter."
-        -5 -> "Account is banned or does not exist."
-        else -> "Failed to load chapter pages. Unknown error (code: $code)."
-    }
-
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
+    private val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.ROOT)
 
     companion object {
-        private const val SORT_UPDATE_TIME = "0"
-        private const val SORT_TOP_VIEWS = "2"
+        private const val ORDER_UPDATED = "updated_desc"
+        private const val ORDER_VIEWS = "views_desc"
 
-        private val CHAPTER_NUMBER_REGEX = Regex("""chapter\s*([0-9]+(?:\.[0-9]+)?)""", RegexOption.IGNORE_CASE)
-        private val CHAPTER_TOKEN_REGEX = Regex("""var\s+ts\s*=\s*"([^"]+)""")
+        private val CHAPTER_NUMBER_REGEX = Regex("""章节\s*([0-9]+(?:\.[0-9]+)?)""")
     }
 }

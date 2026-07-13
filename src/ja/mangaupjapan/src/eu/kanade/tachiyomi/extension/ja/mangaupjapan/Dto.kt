@@ -31,5 +31,5 @@ class PageContent(
 
 @Serializable
 class PageValue(
-    val imageUrl: String?,
+    val imageUrl: String? = null,
 )

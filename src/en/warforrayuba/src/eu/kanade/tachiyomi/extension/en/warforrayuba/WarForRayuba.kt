@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.en.warforrayuba
 
 import android.os.Build
 import eu.kanade.tachiyomi.AppInfo
+import eu.kanade.tachiyomi.extension.en.warforrayuba.dto.GithubContentDto
 import eu.kanade.tachiyomi.extension.en.warforrayuba.dto.PageDto
 import eu.kanade.tachiyomi.extension.en.warforrayuba.dto.RoundDto
 import eu.kanade.tachiyomi.network.GET
@@ -12,7 +13,6 @@ import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
-import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.network.rateLimit
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -58,21 +58,20 @@ class WarForRayuba : HttpSource() {
         add("Referer", baseUrl)
     }
 
-    override fun popularMangaRequest(page: Int) = GET("https://github.com/xrabohrok/WarMap/tree/main/tools", headers)
+    override fun popularMangaRequest(page: Int) = GET("https://api.github.com/repos/xrabohrok/WarMap/contents/tools", headers)
 
     override fun popularMangaParse(response: Response): MangasPage {
-        val document = response.asJsoup()
+        val files: List<GithubContentDto> = json.decodeFromString(response.body.string())
 
-        val mangas = document.select("#repo-content-pjax-container .Details div[role=row] div[role=rowheader] a[href*='.json']").map { element ->
+        val mangas = files.filter { it.name.endsWith(".json") }.map { file ->
             SManga.create().apply {
-                val githubRawUrl = "https://raw.githubusercontent.com/xrabohrok/WarMap/" + element.attr("abs:href").replace(".*(?=main)".toRegex(), "")
                 val githubData: RoundDto = json.decodeFromString(
-                    client.newCall(GET(githubRawUrl, headers)).execute().body.string(),
+                    client.newCall(GET(file.download_url, headers)).execute().body.string(),
                 )
 
                 title = githubData.title
                 thumbnail_url = githubData.cover
-                url = githubRawUrl
+                url = file.download_url
             }
         }
 

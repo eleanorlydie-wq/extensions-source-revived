@@ -3,7 +3,7 @@ ext {
     extClass = '.Razure'
     themePkg = 'mangathemesia'
     baseUrl = 'https://razure.org'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = false
 }
 

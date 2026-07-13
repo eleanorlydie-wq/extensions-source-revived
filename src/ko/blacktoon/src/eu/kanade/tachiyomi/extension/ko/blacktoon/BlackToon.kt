@@ -35,7 +35,10 @@ class BlackToon : HttpSource() {
     override val client = network.client.newBuilder().addInterceptor { chain ->
         if (currentBaseUrlHost.isBlank()) {
             noRedirectClient.newCall(GET(baseUrl, headers)).execute().use {
+                // baseUrl may already be the current mirror (no redirect happens in
+                // that case), so fall back to its own host instead of failing.
                 currentBaseUrlHost = it.headers["location"]?.toHttpUrlOrNull()?.host
+                    ?: baseUrl.toHttpUrlOrNull()?.host
                     ?: throw IOException("unable to get updated url")
             }
         }
@@ -62,16 +65,12 @@ class BlackToon : HttpSource() {
     private val json by injectLazy<Json>()
 
     private val db by lazy {
-        val doc = client.newCall(GET(baseUrl, headers)).execute().asJsoup()
-        doc.select("script[src*=data/webtoon]").flatMap { scriptEl ->
-            var listIdx: Int
-            client.newCall(GET(scriptEl.absUrl("src"), headers))
+        // The site no longer embeds <script src="...data/webtoon...."> tags in the
+        // page; it loads these two data files asynchronously via JS instead. Fetch
+        // them directly: index 1 = ongoing series, index 0 = completed series.
+        listOf(0, 1).flatMap { listIdx ->
+            client.newCall(GET("$baseUrl/data/webtoon_$listIdx.js", headers))
                 .execute().body.string()
-                .also {
-                    listIdx = it.substringBefore(" = ")
-                        .substringAfter("data")
-                        .toInt()
-                }
                 .substringAfter(" = ")
                 .removeSuffix(";")
                 .let { json.decodeFromString<List<SeriesItem>>(it) }
@@ -133,8 +132,8 @@ class BlackToon : HttpSource() {
         val doc = response.asJsoup()
         return SManga.create().apply {
             description = doc.select("p.mt-2").last()?.text()
-            thumbnail_url = doc.selectFirst("script:containsData(+img_domain+)")?.data()?.let {
-                cdnUrl + it.substringAfter("+'").substringBefore("'+")
+            thumbnail_url = doc.selectFirst("img.thumb2")?.attr("o_src")?.takeIf { it.isNotBlank() }?.let {
+                cdnUrl + it
             }
             status = response.request.url.fragment!!.toInt()
         }

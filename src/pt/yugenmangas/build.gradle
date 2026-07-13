@@ -1,7 +1,7 @@
 ext {
     extName = 'Yugen Mangás'
     extClass = '.YugenMangas'
-    extVersionCode = 52
+    extVersionCode = 53
 }
 
 apply plugin: "kei.plugins.extension.legacy"

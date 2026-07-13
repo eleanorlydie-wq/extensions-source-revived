@@ -3,7 +3,7 @@ ext {
     extClass = '.OsakaScan'
     themePkg = 'zeistmanga'
     baseUrl = 'https://www.osakascan.com'
-    overrideVersionCode = 1
+    overrideVersionCode = 2
     isNsfw = true
 }
 

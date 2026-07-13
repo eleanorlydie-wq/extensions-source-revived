@@ -222,7 +222,7 @@ class Chapters(
 @Serializable
 class ContentsAccessCondition(
     @SerialName("__typename") val typename: String,
-    val info: PurchaseInfo?,
+    val info: PurchaseInfo? = null,
 )
 
 @Serializable

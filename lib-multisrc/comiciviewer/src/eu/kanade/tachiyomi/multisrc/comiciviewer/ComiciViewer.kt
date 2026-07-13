@@ -41,32 +41,29 @@ abstract class ComiciViewer(
     override fun headersBuilder() = super.headersBuilder()
         .set("Referer", "$baseUrl/")
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/ranking/manga", headers)
+    // /ranking/manga and /category/manga are client-rendered now — they return the SPA shell with
+    // no series in the HTML, so the old ranking-box-vertical / category-box-vertical selectors match
+    // nothing. /series/list is the catalogue the site still renders server-side; "up" is its default
+    // ordering (更新順, by update) and "new" is 新作順. No server-rendered popularity ranking survives.
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/series/list/up/$page", headers)
 
-    override fun popularMangaParse(response: Response): MangasPage {
+    override fun popularMangaParse(response: Response): MangasPage = seriesListParse(response)
+
+    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/series/list/new/$page", headers)
+
+    override fun latestUpdatesParse(response: Response): MangasPage = seriesListParse(response)
+
+    protected fun seriesListParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangas = document.select("div.ranking-box-vertical, div.ranking-box-vertical-top3").map { element ->
+        val mangas = document.select("div.series-list-item").map { element ->
             SManga.create().apply {
-                setUrlWithoutDomain(element.selectFirst("a")!!.absUrl("href"))
-                title = element.selectFirst(".title-text")!!.text()
-                thumbnail_url = element.selectFirst("source")?.attr("data-srcset")?.substringBefore(" ")?.let { "https:$it" }
+                setUrlWithoutDomain(element.selectFirst("a.series-list-item-link")!!.absUrl("href"))
+                title = element.selectFirst("div.series-list-item-h span")!!.text()
+                thumbnail_url = element.selectFirst("img.series-list-item-img")?.absUrl("src")
             }
         }
-        return MangasPage(mangas, false)
-    }
-
-    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/category/manga", headers)
-
-    override fun latestUpdatesParse(response: Response): MangasPage {
-        val document = response.asJsoup()
-        val mangas = document.select("div.category-box-vertical").map { element ->
-            SManga.create().apply {
-                setUrlWithoutDomain(element.selectFirst("a")!!.absUrl("href"))
-                title = element.selectFirst(".title-text")!!.text()
-                thumbnail_url = element.selectFirst("source")?.attr("data-srcset")?.substringBefore(" ")?.let { "https:$it" }
-            }
-        }
-        return MangasPage(mangas, false)
+        val hasNextPage = document.selectFirst("a.g-pager-link.mode-active + a.g-pager-link") != null
+        return MangasPage(mangas, hasNextPage)
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
@@ -90,9 +87,7 @@ abstract class ComiciViewer(
         val url = response.request.url.pathSegments
 
         return when {
-            url.contains("ranking") -> popularMangaParse(response)
-
-            url.contains("category") -> latestUpdatesParse(response)
+            url.contains("series") || url.contains("category") -> seriesListParse(response)
 
             else -> {
                 val document = response.asJsoup()
@@ -207,18 +202,21 @@ abstract class ComiciViewer(
 
     protected open class BrowseFilter(vals: Array<String>) : Filter.Select<String>("Filter by", vals)
 
+    // The ?type=…&day=… query form these used to point at now returns the empty SPA shell.
+    // The site links these path forms itself (note the camelCase "oneShot"), and each one
+    // server-renders series-list-item blocks.
     protected open fun getFilterOptions(): List<Pair<String, String>> = listOf(
-        Pair("ランキング", "/ranking/manga"),
-        Pair("読み切り", "/category/manga?type=読み切り"),
-        Pair("完結", "/category/manga?type=完結"),
-        Pair("月曜日", "/category/manga?type=連載中&day=月"),
-        Pair("火曜日", "/category/manga?type=連載中&day=火"),
-        Pair("水曜日", "/category/manga?type=連載中&day=水"),
-        Pair("木曜日", "/category/manga?type=連載中&day=木"),
-        Pair("金曜日", "/category/manga?type=連載中&day=金"),
-        Pair("土曜日", "/category/manga?type=連載中&day=土"),
-        Pair("日曜日", "/category/manga?type=連載中&day=日"),
-        Pair("その他", "/category/manga?type=連載中&day=その他"),
+        Pair("更新順", "/series/list/up/1"),
+        Pair("新作順", "/series/list/new/1"),
+        Pair("読み切り", "/category/manga/oneShot/1"),
+        Pair("完結", "/category/manga/complete/1"),
+        Pair("月曜日", "/category/manga/day/1/1"),
+        Pair("火曜日", "/category/manga/day/2/1"),
+        Pair("水曜日", "/category/manga/day/3/1"),
+        Pair("木曜日", "/category/manga/day/4/1"),
+        Pair("金曜日", "/category/manga/day/5/1"),
+        Pair("土曜日", "/category/manga/day/6/1"),
+        Pair("日曜日", "/category/manga/day/7/1"),
     )
 
     override fun getFilterList() = FilterList(

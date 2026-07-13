@@ -3,7 +3,7 @@ ext {
     extClass = '.OneMangaInfo'
     themePkg = 'mangahub'
     baseUrl = 'https://onemanga.info'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = true
 }
 

@@ -3,7 +3,7 @@ ext {
     extClass = '.MangaHubIo'
     themePkg = 'mangahub'
     baseUrl = 'https://mangahub.io'
-    overrideVersionCode = 10
+    overrideVersionCode = 11
     isNsfw = true
 }
 

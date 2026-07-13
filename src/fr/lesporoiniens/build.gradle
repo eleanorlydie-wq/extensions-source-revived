@@ -3,7 +3,7 @@ ext {
     extClass = '.LesPoroiniens'
     themePkg = 'scanr'
     baseUrl = 'https://lesporoiniens.org'
-    overrideVersionCode = 1
+    overrideVersionCode = 2
     isNsfw = true
 }
 

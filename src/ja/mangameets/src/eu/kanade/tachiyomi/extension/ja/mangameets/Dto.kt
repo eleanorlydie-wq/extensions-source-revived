@@ -45,10 +45,10 @@ class IncludedItem(
 
 @Serializable
 class IncludedAttributes(
-    @SerialName("dir_name") val dirName: String?,
-    val title: String?,
-    val url: String?,
-    val name: String?,
+    @SerialName("dir_name") val dirName: String? = null,
+    val title: String? = null,
+    val url: String? = null,
+    val name: String? = null,
 )
 
 @Serializable

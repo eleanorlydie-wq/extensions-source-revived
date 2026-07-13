@@ -324,7 +324,15 @@ class OlympusScanlation :
         }
         set(map) {
             slugMapCache = map
-            edit().putString(SLUG_MAP, map.toJsonString()).apply()
+            try {
+                edit().putString(SLUG_MAP, map.toJsonString()).apply()
+            } catch (_: IllegalArgumentException) {
+                // The catalog has grown large enough that the serialized map
+                // exceeds the platform's preference value size limit. Keep
+                // the in-memory cache (already updated above) and skip
+                // persisting instead of crashing; it will be rebuilt on the
+                // next fetchSeriesList() call.
+            }
         }
 
     companion object {

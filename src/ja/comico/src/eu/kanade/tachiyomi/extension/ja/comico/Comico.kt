@@ -57,8 +57,17 @@ class Comico : HttpSource() {
                     cookieManager.setCookie(url.toString(), it.toString())
                 }
 
-                override fun loadForRequest(url: HttpUrl) = cookieManager.getCookie(url.toString())?.split("; ")
-                    ?.mapNotNull { Cookie.parse(url, it) } ?: emptyList()
+                override fun loadForRequest(url: HttpUrl): List<Cookie> {
+                    // Some WebView-less environments don't implement getCookie and throw
+                    // instead of returning null, so guard against that as well.
+                    val cookies = try {
+                        cookieManager.getCookie(url.toString())
+                    } catch (_: Throwable) {
+                        null
+                    }
+
+                    return cookies?.split("; ")?.mapNotNull { Cookie.parse(url, it) } ?: emptyList()
+                }
             },
         ).build()
 
