@@ -1,9 +1,8 @@
 ext {
     extName = 'SkyMangas'
     extClass = '.SkyMangas'
-    themePkg = 'mangathemesia'
+    extVersionCode = 3
     baseUrl = 'https://skymangas.com'
-    overrideVersionCode = 1
     isNsfw = false
 }
 

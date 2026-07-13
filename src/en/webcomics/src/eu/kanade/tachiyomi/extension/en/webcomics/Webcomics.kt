@@ -73,9 +73,9 @@ class Webcomics :
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
 
-        val mangas = document.select("#All a").map { element ->
+        val mangas = document.select(".list-item a").map { element ->
             SManga.create().apply {
-                title = element.selectFirst("h5")!!.text()
+                title = element.selectFirst(".info-title")!!.text()
                 thumbnail_url = element.selectFirst("img[src]")?.absUrl("src")
                 setUrlWithoutDomain(element.absUrl("href"))
             }

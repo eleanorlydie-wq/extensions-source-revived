@@ -107,7 +107,7 @@ class QwikSeriesDto(
     @SerialName("is_mature") val isMature: Boolean = false,
 ) {
     fun toSManga(imageCdnUrl: String) = SManga.create().apply {
-        url = "/series/comic-$slug#$id"
+        url = "/series/$slug/"
         title = name
         thumbnail_url = cover?.let { "$imageCdnUrl/$it" }
     }

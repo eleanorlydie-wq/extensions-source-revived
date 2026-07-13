@@ -1,7 +1,7 @@
 ext {
     extName = 'U-NEXT'
     extClass = '.UNext'
-    extVersionCode = 5
+    extVersionCode = 6
     isNsfw = false
 }
 

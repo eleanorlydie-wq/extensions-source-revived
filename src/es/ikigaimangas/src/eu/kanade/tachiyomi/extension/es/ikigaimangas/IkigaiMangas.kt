@@ -33,6 +33,7 @@ import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import org.jsoup.nodes.Document
 import rx.Observable
 import uy.kohesive.injekt.injectLazy
 import java.text.SimpleDateFormat
@@ -47,7 +48,6 @@ class IkigaiMangas :
     HttpSource(),
     ConfigurableSource {
     private val fetchedDomainUrlHost by lazy { fetchedDomainUrl.toHttpUrl().host }
-    private val apiBaseUrlHost by lazy { apiBaseUrl.toHttpUrl().host }
 
     private val isCi = System.getenv("CI") == "true"
 
@@ -77,8 +77,6 @@ class IkigaiMangas :
         }
     }
 
-    private val apiBaseUrl: String = "https://panel.ikigaimangas.com"
-
     private val imageCdnUrl: String = "https://image.ikigaimangas.cloud"
 
     override val lang: String = "es"
@@ -90,8 +88,7 @@ class IkigaiMangas :
     override val client by lazy {
         network.client.newBuilder()
             .addNetworkInterceptor(::nsfwCookieInterceptor)
-            .rateLimit(1, 2.seconds) { it.host == fetchedDomainUrlHost }
-            .rateLimit(2, 1.seconds) { it.host == apiBaseUrlHost }
+            .rateLimit(2, 1.seconds) { it.host == fetchedDomainUrlHost }
             .build()
     }
 
@@ -134,33 +131,59 @@ class IkigaiMangas :
         timeZone = TimeZone.getTimeZone("UTC")
     }
 
-    override fun popularMangaRequest(page: Int): Request {
-        val apiUrl = "$apiBaseUrl/api/swf/series/ranking-list".toHttpUrl().newBuilder()
-            .addQueryParameter("type", "total_ranking")
-            .addQueryParameter("series_type", "comic")
-            .addQueryParameter("nsfw", if (preferences.showNsfwPref) "true" else "false")
+    private val chapterDateFormat = SimpleDateFormat("EEE MMM d yyyy HH:mm:ss 'GMT'Z", Locale.US)
 
-        return GET(apiUrl.build(), headers)
+    override fun popularMangaRequest(page: Int): Request {
+        val url = "$baseUrl/clasificacion/".toHttpUrl().newBuilder()
+            .addQueryParameter("periodo", "total_ranking")
+            .addQueryParameter("tipo", "comic")
+            .build()
+
+        return GET(url, headers)
     }
 
     override fun popularMangaParse(response: Response): MangasPage {
-        val result = json.decodeFromString<PayloadSeriesDto>(response.body.string())
-        val mangaList = result.data.map { it.toSManga() }
-        return MangasPage(mangaList, false)
+        val document = response.asJsoup()
+        val mangas = document.select("div.card.bg-base-200").mapNotNull { card ->
+            val title = card.selectFirst("h2.card-title")?.text() ?: return@mapNotNull null
+            val href = card.selectFirst("a[href*=/series/]")?.attr("abs:href") ?: return@mapNotNull null
+            SManga.create().apply {
+                this.title = title
+                setUrlWithoutDomain(href)
+                thumbnail_url = card.selectFirst("img")?.attr("abs:src")
+            }
+        }
+        return MangasPage(mangas, false)
     }
 
     override fun latestUpdatesRequest(page: Int): Request {
-        val apiUrl = "$apiBaseUrl/api/swf/new-chapters".toHttpUrl().newBuilder()
-            .addQueryParameter("nsfw", if (preferences.showNsfwPref) "true" else "false")
-            .addQueryParameter("page", page.toString())
+        val url = baseUrl.toHttpUrl().newBuilder()
+            .addQueryParameter("new_chapters", "all")
+            .addQueryParameter("pagina", page.toString())
+            .build()
 
-        return GET(apiUrl.build(), headers)
+        return GET(url, headers)
     }
 
     override fun latestUpdatesParse(response: Response): MangasPage {
-        val result = json.decodeFromString<PayloadLatestDto>(response.body.string())
-        val mangaList = result.data.filter { it.type == "comic" }.map { it.toSManga() }
-        return MangasPage(mangaList, result.hasNextPage())
+        val document = response.asJsoup()
+        val section = document.selectFirst("section[aria-labelledby=new-chapters-heading]")
+
+        val mangas = section?.select("a[href*=/series/]")?.mapNotNull { a ->
+            val title = a.selectFirst("h2.card-title")?.text() ?: return@mapNotNull null
+            SManga.create().apply {
+                this.title = title
+                setUrlWithoutDomain(a.attr("abs:href"))
+                thumbnail_url = a.selectFirst("img")?.attr("abs:src")
+            }
+        }.orEmpty()
+
+        val currentPage = response.request.url.queryParameter("pagina")?.toIntOrNull() ?: 1
+        val maxPage = section?.select("nav[aria-label=pagination] a")
+            ?.mapNotNull { PAGINA_REGEX.find(it.attr("href"))?.groupValues?.get(1)?.toIntOrNull() }
+            ?.maxOrNull() ?: currentPage
+
+        return MangasPage(mangas, currentPage < maxPage)
     }
 
     private var seriesCache: List<QwikSeriesDto>? = null
@@ -184,31 +207,21 @@ class IkigaiMangas :
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val sortByFilter = filters.firstInstanceOrNull<SortByFilter>()
-
-        val apiUrl = "$apiBaseUrl/api/swf/series".toHttpUrl().newBuilder()
-
-        apiUrl.addQueryParameter("page", page.toString())
-        apiUrl.addQueryParameter("type", "comic")
-        apiUrl.addQueryParameter("nsfw", if (preferences.showNsfwPref) "true" else "false")
+        val url = "$baseUrl/series/".toHttpUrl().newBuilder()
+            .addQueryParameter("pagina", page.toString())
 
         val genres = filters.firstInstanceOrNull<GenreFilter>()?.state.orEmpty()
             .filter(Genre::state)
             .map(Genre::id)
-            .joinToString(",")
 
         val statuses = filters.firstInstanceOrNull<StatusFilter>()?.state.orEmpty()
             .filter(Status::state)
             .map(Status::id)
-            .joinToString(",")
 
-        if (genres.isNotEmpty()) apiUrl.addQueryParameter("genres", genres)
-        if (statuses.isNotEmpty()) apiUrl.addQueryParameter("status", statuses)
+        genres.forEach { url.addQueryParameter("generos[]", it.toString()) }
+        statuses.forEach { url.addQueryParameter("estados[]", it.toString()) }
 
-        apiUrl.addQueryParameter("column", sortByFilter?.selected ?: "name")
-        apiUrl.addQueryParameter("direction", if (sortByFilter?.state?.ascending == true) "asc" else "desc")
-
-        return GET(apiUrl.build(), headers)
+        return GET(url.build(), headers)
     }
 
     private fun getQuerySeriesList(): List<QwikSeriesDto> {
@@ -228,9 +241,22 @@ class IkigaiMangas :
     }
 
     override fun searchMangaParse(response: Response): MangasPage {
-        val result = json.decodeFromString<PayloadSeriesDto>(response.body.string())
-        val mangaList = result.data.filter { it.type == "comic" }.map { it.toSManga() }
-        return MangasPage(mangaList, result.hasNextPage())
+        val document = response.asJsoup()
+        val mangas = document.select("a.card[href*=/series/]").mapNotNull { a ->
+            val title = a.selectFirst("h3")?.text() ?: return@mapNotNull null
+            SManga.create().apply {
+                this.title = title
+                setUrlWithoutDomain(a.attr("abs:href"))
+                thumbnail_url = a.selectFirst("img")?.attr("abs:src")
+            }
+        }
+
+        val currentPage = response.request.url.queryParameter("pagina")?.toIntOrNull() ?: 1
+        val maxPage = document.select("nav[aria-label=pagination] a")
+            .mapNotNull { PAGINA_REGEX.find(it.attr("href"))?.groupValues?.get(1)?.toIntOrNull() }
+            .maxOrNull() ?: currentPage
+
+        return MangasPage(mangas, currentPage < maxPage)
     }
 
     private fun qwikDataParse(query: String, seriesList: List<QwikSeriesDto>, page: Int): MangasPage {
@@ -249,59 +275,80 @@ class IkigaiMangas :
         return MangasPage(pagedSeries, filteredSeries.size > page * PAGE_SIZE)
     }
 
-    override fun getMangaUrl(manga: SManga) = preferences.prefBaseUrl + manga.url.substringBefore("#").replace("/series/comic-", "/series/")
+    override fun getMangaUrl(manga: SManga) = baseUrl + manga.url
 
-    override fun mangaDetailsRequest(manga: SManga): Request {
-        val slug = manga.url
-            .substringAfter("/series/comic-")
-            .substringBefore("#")
-
-        return GET("$apiBaseUrl/api/swf/series/$slug", headers)
-    }
+    override fun mangaDetailsRequest(manga: SManga): Request = GET(baseUrl + manga.url, headers)
 
     override fun mangaDetailsParse(response: Response): SManga {
-        val result = json.decodeFromString<PayloadSeriesDetailsDto>(response.body.string())
-        return result.series.toSMangaDetails()
+        val document = response.asJsoup()
+        val article = document.selectFirst("article.card")
+
+        val statusHref = article?.select("a[href]")?.map { it.attr("href") }?.firstOrNull { it.contains("estados") }
+        val statusId = statusHref?.let { ESTADOS_REGEX.find(it)?.groupValues?.get(1)?.toLongOrNull() }
+
+        return SManga.create().apply {
+            title = document.selectFirst("h1.card-title")?.text().orEmpty()
+            thumbnail_url = article?.selectFirst("img")?.attr("abs:src")
+            description = document.selectFirst("p.line-clamp-3")?.text()
+            genre = document.select("li.badge-accent > a").joinToString { it.text() }
+            status = parseSeriesStatus(statusId)
+        }
     }
 
-    override fun getChapterUrl(chapter: SChapter) = preferences.prefBaseUrl + chapter.url.substringBefore("#")
-
-    override fun chapterListRequest(manga: SManga): Request {
-        val slug = manga.url.substringAfter("/series/comic-").substringBefore("#")
-        return GET("$apiBaseUrl/api/swf/series/$slug/chapters?page=1", headers)
+    private fun parseSeriesStatus(statusId: Long?) = when (statusId) {
+        906397890812182531, 911437469204086787 -> SManga.ONGOING
+        906409397258190851 -> SManga.ON_HIATUS
+        906409532796731395, 911793517664960513 -> SManga.COMPLETED
+        906426661911756802, 906428048651190273, 911793767845265410, 911793856861798402 -> SManga.CANCELLED
+        else -> SManga.UNKNOWN
     }
+
+    override fun getChapterUrl(chapter: SChapter) = baseUrl + chapter.url
+
+    override fun chapterListRequest(manga: SManga): Request = GET("$baseUrl${manga.url}?pagina=1", headers)
 
     override fun chapterListParse(response: Response): List<SChapter> {
-        val slug = response.request.url.toString()
-            .substringAfter("/series/")
-            .substringBefore("/chapters")
-        var result = json.decodeFromString<PayloadChaptersDto>(response.body.string())
-        val mangas = mutableListOf<SChapter>()
-        mangas.addAll(result.data.map { it.toSChapter(dateFormat) })
-        var page = 2
-        while (result.meta.hasNextPage()) {
-            val newResponse = client.newCall(GET("$apiBaseUrl/api/swf/series/$slug/chapters?page=$page", headers)).execute()
-            result = json.decodeFromString<PayloadChaptersDto>(newResponse.body.string())
-            mangas.addAll(result.data.map { it.toSChapter(dateFormat) })
-            page++
+        val document = response.asJsoup()
+        val chapters = mutableListOf<SChapter>()
+        chapters += parseChapterListDocument(document)
+
+        val basePath = response.request.url.toString().substringBefore("?pagina=").substringBefore("?")
+        val maxPage = document.select("nav[aria-label=pagination] a")
+            .mapNotNull { PAGINA_REGEX.find(it.attr("href"))?.groupValues?.get(1)?.toIntOrNull() }
+            .maxOrNull() ?: 1
+
+        for (page in 2..maxPage) {
+            val newDocument = client.newCall(GET("$basePath?pagina=$page", headers)).execute().asJsoup()
+            chapters += parseChapterListDocument(newDocument)
         }
-        return mangas
+
+        return chapters
     }
 
-    override fun pageListRequest(chapter: SChapter): Request = GET(fetchedDomainUrl + chapter.url.substringBefore("#"), headers)
+    private fun parseChapterListDocument(document: Document): List<SChapter> = document.select("a[href^=/capitulo/]").mapNotNull { a ->
+        val nameEl = a.selectFirst("h3.card-title") ?: return@mapNotNull null
+        SChapter.create().apply {
+            setUrlWithoutDomain(a.attr("abs:href"))
+            name = nameEl.text()
+            date_upload = a.selectFirst("time[datetime]")?.attr("datetime")?.let(::parseChapterDate) ?: 0L
+        }
+    }
+
+    private fun parseChapterDate(raw: String): Long = try {
+        chapterDateFormat.parse(raw.substringBefore(" ("))?.time ?: 0L
+    } catch (e: Exception) {
+        0L
+    }
+
+    override fun pageListRequest(chapter: SChapter): Request = GET(baseUrl + chapter.url, headers)
 
     override fun pageListParse(response: Response): List<Page> {
-        val request = response.request
-        var document = response.asJsoup()
-        document.selectFirst("button > span:contains(permitir nsfw)")?.let {
-            val newRequest = request.newBuilder()
-                .header("X-Add-Nsfw-Cookie", "1")
-                .build()
-            document = client.newCall(newRequest).execute().asJsoup()
-        }
-        return document.select("section div.img > img").mapIndexed { i, element ->
-            Page(i, imageUrl = element.attr("abs:src"))
-        }
+        val document = response.asJsoup()
+        return document.select("img[alt^=Página]")
+            .map { it.attr("abs:src") }
+            .filterNot { it.contains("/posts/") || it.endsWith("zzzz.webp") }
+            .distinct()
+            .mapIndexed { i, url -> Page(i, imageUrl = url) }
     }
 
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
@@ -352,13 +399,28 @@ class IkigaiMangas :
         fetchFiltersAttempts++
         thread {
             try {
-                val response = client.newCall(GET("$apiBaseUrl/api/swf/filter-options", headers)).execute()
-                val filters = json.decodeFromString<PayloadFiltersDto>(response.body.string())
+                val document = client.newCall(GET(baseUrl, headers)).execute().asJsoup()
+                val links = document.select("a[href*=/series/]")
 
-                genresList = filters.data.genres.map { it.name.trim() to it.id }
-                statusesList = filters.data.statuses.map { it.name.trim() to it.id }
+                val genres = links.mapNotNull { a ->
+                    val id = GENEROS_REGEX.find(a.attr("href"))?.groupValues?.get(1)?.toLongOrNull()
+                        ?: return@mapNotNull null
+                    a.text().trim() to id
+                }.distinctBy { it.second }
 
-                filtersState = FiltersState.FETCHED
+                val statuses = links.mapNotNull { a ->
+                    val id = ESTADOS_REGEX.find(a.attr("href"))?.groupValues?.get(1)?.toLongOrNull()
+                        ?: return@mapNotNull null
+                    a.text().trim() to id
+                }.distinctBy { it.second }
+
+                if (genres.isNotEmpty()) {
+                    genresList = genres
+                    statusesList = statuses
+                    filtersState = FiltersState.FETCHED
+                } else {
+                    filtersState = FiltersState.NOT_FETCHED
+                }
             } catch (e: Throwable) {
                 filtersState = FiltersState.NOT_FETCHED
             }
@@ -545,6 +607,10 @@ class IkigaiMangas :
         private const val FETCH_DOMAIN_PREF_DEFAULT = true
 
         private const val PAGE_SIZE = 20
+
+        private val PAGINA_REGEX = Regex("""pagina=(\d+)""")
+        private val ESTADOS_REGEX = Regex("""estados(?:%5B%5D|\[])=(\d+)""")
+        private val GENEROS_REGEX = Regex("""generos(?:%5B%5D|\[])=(\d+)""")
     }
 
     init {

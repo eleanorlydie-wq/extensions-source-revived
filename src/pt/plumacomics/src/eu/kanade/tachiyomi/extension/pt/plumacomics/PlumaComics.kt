@@ -11,10 +11,13 @@ import eu.kanade.tachiyomi.util.asJsoup
 import keiyoushi.network.rateLimit
 import keiyoushi.utils.extractNextJs
 import keiyoushi.utils.parseAs
+import keiyoushi.utils.tryParse
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
 class PlumaComics : HttpSource() {
@@ -31,26 +34,34 @@ class PlumaComics : HttpSource() {
         .rateLimit(3, 1.seconds)
         .build()
 
-    override val versionId = 5
+    override val versionId = 6
+
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH)
 
     // Popular
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/series?sort=popular", headers)
+    // The site migrated from Madara HTML to a Next.js SPA and "/series" now redirects
+    // unauthenticated requests to "/login". The manga grid is fetched by the client from
+    // this JSON API instead (seen live at https://plumacomics.cloud/api/obras?page=1&sort=popular).
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/api/obras?page=$page&sort=popular", headers)
 
     override fun popularMangaParse(response: Response): MangasPage {
-        val document = response.asJsoup()
-        val mangas = document.select("a.group[href*=series]").map { element ->
+        val dto = response.parseAs<ObrasDto>()
+        val page = response.request.url.queryParameter("page")?.toIntOrNull() ?: 1
+        val mangas = dto.series.map {
             SManga.create().apply {
-                title = element.selectFirst("h3")!!.text()
-                thumbnail_url = element.selectFirst("img")?.absUrl("src")
-                setUrlWithoutDomain(element.absUrl("href"))
+                title = it.title
+                thumbnail_url = "$baseUrl/api/cover/${it.coverPath}"
+                url = "/title/${it.slug}"
             }
         }
-        return MangasPage(mangas, hasNextPage = document.selectFirst("a.btn-primary[href*=page]") != null)
+        return MangasPage(mangas, hasNextPage = page < dto.totalPages)
     }
 
     // Latest
 
-    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/series", headers)
+    // Omitting "sort" defaults to newest chapter updates first (verified against the
+    // homepage's "latest updates" list, which uses the same ordering).
+    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/api/obras?page=$page", headers)
 
     override fun latestUpdatesParse(response: Response): MangasPage = popularMangaParse(response)
 
@@ -69,7 +80,7 @@ class PlumaComics : HttpSource() {
             SManga.create().apply {
                 title = it.title
                 thumbnail_url = "$baseUrl/api/cover/${it.coverPath}"
-                url = "/series/${it.slug}"
+                url = "/title/${it.slug}"
             }
         }
 
@@ -78,19 +89,15 @@ class PlumaComics : HttpSource() {
 
     // Details
 
+    // The details page ("/title/{slug}") is still server-rendered with real markup (unlike
+    // "/series/*", which now redirects to "/login"); only the selectors changed with the redesign.
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
         return SManga.create().apply {
-            title = document.selectFirst("meta[property*=title]")!!.text().substringBeforeLast("|")
-            thumbnail_url = document.selectFirst("img.cover-img")?.absUrl("src")
-            description = document.selectFirst("div.card > p.text-sm")?.text()
-            genre = document.select(".flex.flex-wrap > span").joinToString { it.text() }
-            document.selectFirst(".flex.items-center span.text-xs.font-bold.uppercase:last-child")?.text()?.let {
-                status = when (it.lowercase()) {
-                    "em andamento" -> SManga.ONGOING
-                    else -> SManga.UNKNOWN
-                }
-            }
+            title = document.selectFirst("h1")!!.text()
+            thumbnail_url = document.selectFirst("img[loading=eager]")?.absUrl("src")
+            description = document.selectFirst("p.whitespace-pre-line")?.text()
+            genre = document.select("a[href*=genre]").joinToString { it.text() }
             setUrlWithoutDomain(document.location())
         }
     }
@@ -99,9 +106,10 @@ class PlumaComics : HttpSource() {
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
-        return document.select(".card a[href*=ler]").mapIndexed { index, element ->
+        return document.select("li a[href*=\"/view/\"]").map { element ->
             SChapter.create().apply {
-                name = element.selectFirst("span:first-child")!!.text()
+                name = element.selectFirst("strong")!!.text()
+                date_upload = dateFormat.tryParse(element.selectFirst("time[datetime]")?.attr("datetime"))
                 setUrlWithoutDomain(element.absUrl("href"))
             }
         }
@@ -123,8 +131,21 @@ class PlumaComics : HttpSource() {
         val pages = response.parseAs<PagesList>()
 
         return pages.pages.map { page ->
-            Page(page.i, imageUrl = "$baseUrl/${page.u.trim('/')}")
+            // The reader API now returns absolute CDN URLs (https://cdn.orionmanhuas.com/...)
+            // instead of paths relative to baseUrl.
+            val imageUrl = if (page.u.startsWith("http", ignoreCase = true)) {
+                page.u
+            } else {
+                "$baseUrl/${page.u.trim('/')}"
+            }
+            Page(page.i, imageUrl = imageUrl)
         }
+    }
+
+    // The image CDN (cdn.orionmanhuas.com) 403s without a Referer pointing back at the site.
+    override fun imageRequest(page: Page): Request {
+        val imageHeaders = headersBuilder().set("Referer", "$baseUrl/").build()
+        return GET(page.imageUrl!!, imageHeaders)
     }
 
     override fun imageUrlParse(response: Response): String = ""

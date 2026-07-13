@@ -169,7 +169,8 @@ class YomuComics : HttpSource() {
         val resultString = response.body.string()
         val pagination = resultString.parseAs<LibraryResponseDto>().pagination
 
-        // mangas field name changes frequently
+        // mangas field name changes frequently, and the payload is AES-encrypted
+        // (CryptoJS "Salted__" envelope) using a fixed front-end passphrase
         val mangasList = resultString
             .parseAs<JsonElement>()
             .jsonObject.values
@@ -177,13 +178,15 @@ class YomuComics : HttpSource() {
                 val jsonArray = when (v) {
                     is JsonArray -> v
 
-                    // value can be base64 encoded
-                    is JsonPrimitive -> v.contentOrNull?.let { base64Str ->
-                        runCatching {
-                            Base64.decode(base64Str, Base64.DEFAULT)
-                                .toString(Charsets.UTF_8)
-                                .parseAs<JsonArray>()
-                        }.getOrNull()
+                    // value is CryptoJS-AES encrypted (fallback to plain base64 for resilience)
+                    is JsonPrimitive -> v.contentOrNull?.let { encoded ->
+                        decryptCryptoJsAes(encoded, CRYPTO_PASSPHRASE)
+                            ?.let { decrypted -> runCatching { decrypted.parseAs<JsonArray>() }.getOrNull() }
+                            ?: runCatching {
+                                Base64.decode(encoded, Base64.DEFAULT)
+                                    .toString(Charsets.UTF_8)
+                                    .parseAs<JsonArray>()
+                            }.getOrNull()
                     }
                     else -> null
                 }
@@ -222,9 +225,11 @@ class YomuComics : HttpSource() {
             url = "/obra/$mangaSlug"
         }
 
-        val chapters = payload.chapters.map { chapter ->
-            chapter.toSChapter(mangaSlug)
-        }
+        val chapters = payload.encryptedChapters
+            ?.let { decryptCryptoJsAes(it, CRYPTO_PASSPHRASE) }
+            ?.let { decrypted -> runCatching { decrypted.parseAs<List<SeriesChapterDto>>() }.getOrNull() }
+            .orEmpty()
+            .map { chapter -> chapter.toSChapter(mangaSlug) }
 
         return SeriesPageData(manga, chapters)
     }
@@ -239,6 +244,11 @@ class YomuComics : HttpSource() {
         const val DEFAULT_TYPE = "all"
         const val DEFAULT_STATUS = "all"
         const val DEFAULT_SORT = "popular"
+
+        // Front-end passphrase for the CryptoJS AES envelope wrapping /api/library payloads:
+        // `yomu_${NEXT_PUBLIC_CRYPTO_SALT || "trolling"}_scrapers_v1`; the env var is unset in
+        // production so it always falls back to "trolling".
+        const val CRYPTO_PASSPHRASE = "yomu_trolling_scrapers_v1"
     }
 
     private val bibliotecaHeaders by lazy {

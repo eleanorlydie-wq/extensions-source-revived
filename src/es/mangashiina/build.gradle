@@ -1,9 +1,7 @@
 ext {
     extName = 'Manga Mukai'
     extClass = '.MangaMukai'
-    themePkg = 'mangathemesia'
-    baseUrl = 'https://mangamukai.com'
-    overrideVersionCode = 1
+    extVersionCode = 1
     isNsfw = true
 }
 

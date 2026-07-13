@@ -7,7 +7,7 @@ class Azora :
         "Azora",
         "ar",
         "https://azorafly.com",
-        "https://api.azoramoon.com",
+        "https://api.azorafly.com",
     ) {
 
     override val versionId = 2

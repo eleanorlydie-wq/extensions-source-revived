@@ -2,7 +2,6 @@ package eu.kanade.tachiyomi.extension.all.mangafire
 
 import eu.kanade.tachiyomi.source.model.Filter
 import okhttp3.HttpUrl
-import java.util.Calendar
 
 interface UriFilter {
     fun addToUri(builder: HttpUrl.Builder)
@@ -45,15 +44,16 @@ open class UriTriSelectOption(name: String, val value: String) : Filter.TriState
 
 open class UriTriSelectFilter(
     name: String,
-    private val param: String,
+    private val includeParam: String,
+    private val excludeParam: String,
     private val vals: Array<Pair<String, String>>,
 ) : Filter.Group<UriTriSelectOption>(name, vals.map { UriTriSelectOption(it.first, it.second) }),
     UriFilter {
     override fun addToUri(builder: HttpUrl.Builder) {
         state.forEach { s ->
             when (s.state) {
-                TriState.STATE_INCLUDE -> builder.addQueryParameter(param, s.value)
-                TriState.STATE_EXCLUDE -> builder.addQueryParameter(param, "-${s.value}")
+                TriState.STATE_INCLUDE -> builder.addQueryParameter(includeParam, s.value)
+                TriState.STATE_EXCLUDE -> builder.addQueryParameter(excludeParam, s.value)
             }
         }
     }
@@ -62,27 +62,40 @@ open class UriTriSelectFilter(
 class TypeFilter :
     UriMultiSelectFilter(
         "Type",
-        "type[]",
+        "types[]",
         arrayOf(
             Pair("Manga", "manga"),
-            Pair("One-Shot", "one_shot"),
-            Pair("Doujinshi", "doujinshi"),
-            Pair("Novel", "novel"),
             Pair("Manhwa", "manhwa"),
             Pair("Manhua", "manhua"),
+            Pair("Other", "other"),
+        ),
+    )
+
+class ContentRatingFilter :
+    UriMultiSelectFilter(
+        "Content Rating",
+        "content_rating[]",
+        arrayOf(
+            Pair("Safe", "safe"),
+            Pair("Suggestive", "suggestive"),
+            Pair("Erotica", "erotica"),
+            Pair("Pornographic", "pornographic"),
         ),
     )
 
 class GenreFilter :
     UriTriSelectFilter(
         "Genres",
-        "genre[]",
+        "genres_in[]",
+        "genres_ex[]",
         arrayOf(
             Pair("Action", "1"),
+            Pair("Adult", "268929"),
             Pair("Adventure", "78"),
             Pair("Avant Garde", "3"),
             Pair("Boys Love", "4"),
             Pair("Comedy", "5"),
+            Pair("Crime", "268921"),
             Pair("Demons", "77"),
             Pair("Drama", "6"),
             Pair("Ecchi", "7"),
@@ -90,19 +103,25 @@ class GenreFilter :
             Pair("Girls Love", "9"),
             Pair("Gourmet", "10"),
             Pair("Harem", "11"),
+            Pair("Hentai", "268930"),
+            Pair("Historical", "268922"),
             Pair("Horror", "530"),
             Pair("Isekai", "13"),
             Pair("Iyashikei", "531"),
             Pair("Josei", "15"),
             Pair("Kids", "532"),
             Pair("Magic", "539"),
+            Pair("Magical Girls", "268923"),
             Pair("Mahou Shoujo", "533"),
             Pair("Martial Arts", "534"),
+            Pair("Mature", "268931"),
             Pair("Mecha", "19"),
+            Pair("Medical", "268924"),
             Pair("Military", "535"),
             Pair("Music", "21"),
             Pair("Mystery", "22"),
             Pair("Parody", "23"),
+            Pair("Philosophical", "268925"),
             Pair("Psychological", "536"),
             Pair("Reverse Harem", "25"),
             Pair("Romance", "26"),
@@ -112,13 +131,17 @@ class GenreFilter :
             Pair("Shoujo", "30"),
             Pair("Shounen", "31"),
             Pair("Slice of Life", "538"),
+            Pair("Smut", "268932"),
             Pair("Space", "33"),
             Pair("Sports", "34"),
             Pair("Super Power", "75"),
+            Pair("Superhero", "268926"),
             Pair("Supernatural", "76"),
             Pair("Suspense", "37"),
             Pair("Thriller", "38"),
+            Pair("Tragedy", "268927"),
             Pair("Vampire", "39"),
+            Pair("Wuxia", "268928"),
         ),
     )
 
@@ -127,7 +150,7 @@ class GenreModeFilter :
     UriFilter {
     override fun addToUri(builder: HttpUrl.Builder) {
         if (state) {
-            builder.addQueryParameter("genre_mode", "and")
+            builder.addQueryParameter("genres_mode", "and")
         }
     }
 }
@@ -135,36 +158,32 @@ class GenreModeFilter :
 class StatusFilter :
     UriMultiSelectFilter(
         "Status",
-        "status[]",
+        "statuses[]",
         arrayOf(
-            Pair("Completed", "completed"),
             Pair("Releasing", "releasing"),
+            Pair("Finished", "finished"),
             Pair("On Hiatus", "on_hiatus"),
             Pair("Discontinued", "discontinued"),
-            Pair("Not Yet Published", "info"),
+            Pair("Not Yet Released", "not_yet_released"),
         ),
     )
 
+class YearFromFilter : Filter.Text("From")
+class YearToFilter : Filter.Text("To")
+
 class YearFilter :
-    UriMultiSelectFilter(
+    Filter.Group<Filter.Text>(
         "Year",
-        "year[]",
-        years,
-    ) {
-    companion object {
-        private val currentYear by lazy {
-            Calendar.getInstance()[Calendar.YEAR]
+        listOf(YearFromFilter(), YearToFilter()),
+    ),
+    UriFilter {
+    override fun addToUri(builder: HttpUrl.Builder) {
+        state.getOrNull(0)?.state?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            builder.addQueryParameter("year_from", it)
         }
-
-        private val years: Array<Pair<String, String>> = buildList(29) {
-            addAll(
-                (currentYear downTo (currentYear - 20)).map(Int::toString),
-            )
-
-            addAll(
-                (2000 downTo 1930 step 10).map { "${it}s" },
-            )
-        }.map { Pair(it, it) }.toTypedArray()
+        state.getOrNull(1)?.state?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            builder.addQueryParameter("year_to", it)
+        }
     }
 }
 
@@ -176,29 +195,38 @@ class MinChapterFilter :
             val value = state.toIntOrNull()?.takeIf { it > 0 }
                 ?: throw IllegalArgumentException("Minimum chapter length must be a positive integer greater than 0")
 
-            builder.addQueryParameter("minchap", value.toString())
+            builder.addQueryParameter("min_chap", value.toString())
         }
     }
 }
 
 class SortFilter(defaultValue: String? = null) :
-    UriPartFilter(
+    Filter.Select<String>(
         "Sort",
-        "sort",
-        arrayOf(
-            Pair("Most relevance", "most_relevance"),
-            Pair("Recently updated", "recently_updated"),
-            Pair("Recently added", "recently_added"),
-            Pair("Release date", "release_date"),
-            Pair("Name A-Z", "title_az"),
-            Pair("Avg Score", "scores"),
-            Pair("MAL score", "mal_scores"),
-            Pair("Trending", "trending"),
-            Pair("Today views", "today_views"),
-            Pair("Weekly views", "weekly_views"),
-            Pair("Monthly views", "monthly_views"),
-            Pair("Total views", "most_viewed"),
-            Pair("Most favourited", "most_favourited"),
-        ),
-        defaultValue,
-    )
+        sortOptions.map { it.first }.toTypedArray(),
+        sortOptions.indexOfFirst { it.second == defaultValue }.takeIf { it != -1 } ?: 0,
+    ),
+    UriFilter {
+    override fun addToUri(builder: HttpUrl.Builder) {
+        val (field, direction) = sortOptions[state].second.split(":", limit = 2)
+        builder.addQueryParameter("order[$field]", direction)
+    }
+
+    companion object {
+        private val sortOptions = arrayOf(
+            Pair("Best match", "relevance:desc"),
+            Pair("Latest update", "chapter_updated_at:desc"),
+            Pair("Recently added", "created_at:desc"),
+            Pair("Name A-Z", "title:asc"),
+            Pair("Name Z-A", "title:desc"),
+            Pair("Year (newest)", "year:desc"),
+            Pair("Year (oldest)", "year:asc"),
+            Pair("Highest rated", "score:desc"),
+            Pair("Trending", "trending:desc"),
+            Pair("Most viewed - 7 days", "views_7d:desc"),
+            Pair("Most viewed - 30 days", "views_30d:desc"),
+            Pair("Most viewed - all time", "views_total:desc"),
+            Pair("Most followed", "follows_total:desc"),
+        )
+    }
+}

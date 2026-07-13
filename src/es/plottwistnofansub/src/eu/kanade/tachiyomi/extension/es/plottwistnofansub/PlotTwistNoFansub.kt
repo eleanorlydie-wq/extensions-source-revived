@@ -55,7 +55,7 @@ class PlotTwistNoFansub : HttpSource() {
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
 
-        val mangas = document.select("div.page-listing-item figure").map { element ->
+        val mangas = document.select("div.manga-grid-v2 figure, div.page-listing-item figure").map { element ->
             SManga.create().apply {
                 val a = element.selectFirst("a")!!
                 setUrlWithoutDomain(a.attr("abs:href").ifEmpty { a.attr("href") })
@@ -108,26 +108,7 @@ class PlotTwistNoFansub : HttpSource() {
         return GET(url.build(), headers)
     }
 
-    override fun searchMangaParse(response: Response): MangasPage {
-        val document = response.asJsoup()
-        val isTextSearch = response.request.url.queryParameter("s") != null
-
-        if (!isTextSearch) return popularMangaParse(response)
-
-        val mangas = document.select("div.c-tabs-item__content").map { element ->
-            SManga.create().apply {
-                val a = element.selectFirst(".post-title a") ?: element.selectFirst("a")!!
-                setUrlWithoutDomain(a.attr("abs:href").ifEmpty { a.attr("href") })
-                title = a.text().takeIf { it.isNotEmpty() }
-                    ?: element.selectFirst("a")?.attr("title")
-                    ?: throw Exception("Missing title for manga at ${a.attr("href")}")
-                thumbnail_url = element.selectFirst("img")?.imgAttr()
-            }
-        }
-
-        val hasNextPage = document.selectFirst("a.next.page-numbers, a.next") != null
-        return MangasPage(mangas, hasNextPage)
-    }
+    override fun searchMangaParse(response: Response): MangasPage = popularMangaParse(response)
 
     override fun getFilterList(): FilterList = FilterList()
 
@@ -137,20 +118,23 @@ class PlotTwistNoFansub : HttpSource() {
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
         return SManga.create().apply {
-            title = document.selectFirst("p.mn-title-block")?.text()
+            title = document.selectFirst("h1.mn-detail-title")?.text()
+                ?: document.selectFirst("p.mn-title-block")?.text()
                 ?: document.selectFirst("p.titleMangaSingle")?.text()
                 ?: document.selectFirst(".post-title h1, .post-title h3")?.text()
                 ?: throw Exception("Manga title not found")
 
-            thumbnail_url = document.selectFirst(".mn-cover-frame img")?.imgAttr()
+            thumbnail_url = document.selectFirst("div.mn-detail-cover img")?.imgAttr()
+                ?: document.selectFirst(".mn-cover-frame img")?.imgAttr()
                 ?: document.selectFirst(".thumble-container img")?.imgAttr()
                 ?: document.selectFirst(".summary_image img")?.imgAttr()
 
-            description = document.selectFirst("h2:contains(Sinopsis) + div")?.text()
+            description = document.selectFirst("#mn-detail-synopsis")?.text()
+                ?: document.selectFirst("h2:contains(Sinopsis) + div")?.text()
                 ?: document.selectFirst("#section-sinopsis p.font-light.text-white")?.text()
                 ?: document.selectFirst(".summary__content")?.text()
 
-            val genresList = document.select("div.text-white:contains(Gé:) + div a, #section-sinopsis div:contains(Generos:) + div a").map { it.text() }
+            val genresList = document.select("div.mn-detail-genres-desktop a, div.text-white:contains(Gé:) + div a, #section-sinopsis div:contains(Generos:) + div a").map { it.text() }
             genre = if (genresList.isNotEmpty()) {
                 genresList.joinToString()
             } else {
@@ -161,7 +145,8 @@ class PlotTwistNoFansub : HttpSource() {
                 ?: document.selectFirst(".author-content a")?.text()
 
             val statusText = (
-                document.selectFirst("button.mn-chip")?.text()
+                document.selectFirst("span.mn-detail-pill-label:contains(Estado) + span.mn-detail-pill-value")?.text()
+                    ?: document.selectFirst("button.mn-chip")?.text()
                     ?: document.selectFirst(".btn-completed")?.text()
                     ?: document.selectFirst(".btn-ongoing")?.text()
                     ?: document.selectFirst("button:contains(Finalizado), button:contains(En curso)")?.text()
@@ -319,7 +304,7 @@ class PlotTwistNoFansub : HttpSource() {
     // =============================== Pages ================================
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
-        return document.select("div.pg-box img, div.page-break img").mapIndexed { i, img ->
+        return document.select("div.cp-frame img.cp-pic, div.pg-box img, div.page-break img").mapIndexed { i, img ->
             Page(i, imageUrl = img.imgAttr())
         }
     }

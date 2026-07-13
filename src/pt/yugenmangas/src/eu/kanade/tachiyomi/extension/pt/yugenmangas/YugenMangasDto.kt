@@ -3,59 +3,115 @@ package eu.kanade.tachiyomi.extension.pt.yugenmangas
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonNames
 
 @Serializable
-class LibraryWrapper<T>(
-    @SerialName("initialData")
-    private val library: Library<T>,
+class LibraryResponse(
+    val items: List<SeriesSummaryDto> = emptyList(),
+    val page: Int = 1,
+    @SerialName("per_page")
+    val perPage: Int = 1,
+    val total: Int = 0,
 ) {
-    val mangas: List<T> get() = library.series
-    fun hasNextPage() = library.hasNextPage()
+    fun hasNextPage() = page * perPage < total
 }
 
 @Serializable
-class Library<T>(
-    @JsonNames("updates")
-    val series: List<T> = emptyList(),
-    val pagination: Pagination,
-) {
-    fun hasNextPage() = pagination.hasNextPage()
-}
+class SearchResponse(
+    val series: List<SeriesSummaryDto> = emptyList(),
+)
 
 @Serializable
-class Pagination(
-    @SerialName("current_page")
-    val currentPage: Int = 0,
-    @SerialName("total_pages")
-    val totalPages: Int = 0,
-) {
-    fun hasNextPage() = currentPage < totalPages
-}
-
-@Serializable
-class LatestUpdateDto(
-    val series: MangaDto,
-) {
-    fun toSManga(baseUrl: String) = series.toSManga(baseUrl)
-}
-
-@Serializable
-class MangaDto(
-    val code: String,
-    val cover: String,
-    val name: String = "",
+class SeriesSummaryDto(
+    val identifier: String,
     val title: String = "",
+    val cover: String? = null,
 ) {
-    fun toSManga(baseUrl: String) = SManga.create().apply {
-        title = this@MangaDto.title.takeIf(String::isNotBlank) ?: name
-        thumbnail_url = "$baseUrl/$cover&w=640&q=75"
-        url = "/series/$code"
+    fun toSManga() = SManga.create().apply {
+        title = this@SeriesSummaryDto.title
+        thumbnail_url = cover
+        url = "/series/$identifier"
     }
 }
 
 @Serializable
-class PageDto(
-    val path: String,
-    val number: Long,
+class UpdatesResponse(
+    val items: List<UpdateItemDto> = emptyList(),
+    @SerialName("has_more")
+    val hasMore: Boolean = false,
+)
+
+@Serializable
+class UpdateItemDto(
+    @SerialName("series_identifier")
+    val seriesIdentifier: String,
+    @SerialName("series_title")
+    val seriesTitle: String = "",
+    @SerialName("series_cover")
+    val seriesCover: String? = null,
+) {
+    fun toSManga() = SManga.create().apply {
+        title = seriesTitle
+        thumbnail_url = seriesCover
+        url = "/series/$seriesIdentifier"
+    }
+}
+
+@Serializable
+class NamedDto(
+    val name: String = "",
+)
+
+@Serializable
+class SeriesDetailDto(
+    val identifier: String,
+    val title: String = "",
+    val cover: String? = null,
+    val synopsis: String? = null,
+    val status: String? = null,
+    val authors: List<NamedDto> = emptyList(),
+    val artists: List<NamedDto> = emptyList(),
+    val genres: List<NamedDto> = emptyList(),
+) {
+    fun toSManga() = SManga.create().apply {
+        title = this@SeriesDetailDto.title
+        thumbnail_url = cover
+        description = synopsis
+        author = authors.joinToString { it.name }.takeIf(String::isNotBlank)
+        artist = artists.joinToString { it.name }.takeIf(String::isNotBlank)
+        genre = genres.joinToString { it.name }.takeIf(String::isNotBlank)
+        url = "/series/$identifier"
+        status = when (this@SeriesDetailDto.status) {
+            "ongoing" -> SManga.ONGOING
+            "finished" -> SManga.COMPLETED
+            "hiatus" -> SManga.ON_HIATUS
+            "canceled" -> SManga.CANCELLED
+            else -> SManga.UNKNOWN
+        }
+    }
+}
+
+@Serializable
+class ChaptersResponse(
+    val items: List<ChapterItemDto> = emptyList(),
+    @SerialName("has_more")
+    val hasMore: Boolean = false,
+)
+
+@Serializable
+class ChapterItemDto(
+    val identifier: String,
+    val number: Double = 0.0,
+    @SerialName("published_at")
+    val publishedAt: String? = null,
+)
+
+@Serializable
+class ChapterDetailDto(
+    val pages: List<ChapterPageDto> = emptyList(),
+)
+
+@Serializable
+class ChapterPageDto(
+    val number: Int = 0,
+    val url: String,
 )

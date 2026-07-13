@@ -230,5 +230,4 @@ class TempleScan :
 
 // The series-details object embedded in the page's Next.js payload; distinguished from other
 // objects (e.g. related-series cards) by requiring both the slug and the season/chapter list.
-private fun isSeriesData(element: JsonElement): Boolean =
-    element is JsonObject && "series_slug" in element && "Season" in element
+private fun isSeriesData(element: JsonElement): Boolean = element is JsonObject && "series_slug" in element && "Season" in element
