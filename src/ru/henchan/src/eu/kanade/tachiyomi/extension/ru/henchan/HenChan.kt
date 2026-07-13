@@ -37,6 +37,12 @@ class HenChan :
     override val baseUrl: String
         get() = preferences.getString(DOMAIN_TITLE, DOMAIN_DEFAULT)!!
 
+    // The site's "/mostfavorites" popularity endpoint currently returns a
+    // "Технические работы" (under maintenance) stub with no listing at all,
+    // regardless of query format, so fall back to the newest-manga listing
+    // (the only manga listing endpoint that still returns real content).
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/manga/newest?offset=${20 * (page - 1)}", headers)
+
     override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/manga/newest?offset=${20 * (page - 1)}", headers)
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {

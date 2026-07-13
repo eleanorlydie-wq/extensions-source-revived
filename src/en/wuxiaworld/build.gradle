@@ -3,7 +3,7 @@ ext {
     extClass = '.WuxiaWorld'
     themePkg = 'madara'
     baseUrl = 'https://wuxiaworld.site'
-    overrideVersionCode = 1
+    overrideVersionCode = 2
     isNsfw = false
 }
 

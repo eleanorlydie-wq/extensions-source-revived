@@ -39,8 +39,8 @@ class SeriesPayloadDto(
     val author: String? = null,
     val artist: String? = null,
     val coverImage: String? = null,
-    @SerialName("capitulos_lista")
-    val chapters: List<SeriesChapterDto> = emptyList(),
+    // AES-encrypted (CryptoJS "Salted__" envelope) JSON array of SeriesChapterDto
+    val encryptedChapters: String? = null,
     private val slug: String? = null,
 )
 

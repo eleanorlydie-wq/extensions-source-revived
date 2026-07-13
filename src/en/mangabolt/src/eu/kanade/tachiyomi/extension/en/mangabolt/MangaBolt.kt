@@ -27,19 +27,18 @@ class MangaBolt : HttpSource() {
     override fun headersBuilder(): Headers.Builder = super.headersBuilder().add("Referer", "$baseUrl/")
 
     // Popular
-    // Site doesn't have thumbnails for these so they Will only load after opening details
     override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/storage/manga-list.html", headers)
 
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
-        val mangas = document.select(".section-header, .menu-item").asSequence().mapNotNull { element ->
-            val onclick = element.attr("onclick")
-            val path = onclick.substringAfter("'", "").substringBefore("'", "")
-            if (path.isEmpty()) return@mapNotNull null
+        val mangas = document.select("a.manga-card").asSequence().mapNotNull { element ->
+            val href = element.attr("abs:href")
+            if (href.isEmpty()) return@mapNotNull null
             SManga.create().apply {
-                url = "${path.removeSuffix("/")}/"
-                title = element.select("h2, .item-title").text().removeSuffix("🔥").trim()
+                url = href.substringAfter(baseUrl).let { if (it.endsWith("/")) it else "$it/" }
+                title = element.selectFirst(".manga-card-title")?.text()?.trim().orEmpty()
                 if (title.isEmpty()) return@mapNotNull null
+                thumbnail_url = element.selectFirst("img")?.attr("abs:src")
             }
         }.toList()
         return MangasPage(mangas, false)

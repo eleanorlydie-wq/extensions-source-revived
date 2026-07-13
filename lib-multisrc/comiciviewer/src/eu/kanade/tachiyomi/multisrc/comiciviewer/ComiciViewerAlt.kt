@@ -42,7 +42,10 @@ abstract class ComiciViewerAlt(
     override fun headersBuilder() = super.headersBuilder()
         .set("Referer", "$baseUrl/")
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/ranking/manga", headers)
+    // /ranking/manga is client-rendered now and its HTML contains no series at all. /series/list is
+    // the catalogue the site still renders server-side, and latestUpdatesParse below already reads
+    // exactly that markup (div.series-list-item), so it parses this page unchanged.
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/series/list/up/$page", headers)
 
     override fun popularMangaParse(response: Response): MangasPage = latestUpdatesParse(response)
 
@@ -99,10 +102,20 @@ abstract class ComiciViewerAlt(
         return latestUpdatesParse(response)
     }
 
+    /**
+     * The hash is the segment right after "series", NOT the last one. Some sites (bigcomics,
+     * takecomic) link their catalogue entries as /series/<hash>/new rather than /series/<hash>,
+     * so pathSegments.last() returned the literal "new" and every API call 404'd.
+     */
+    private fun seriesHashOf(manga: SManga): String {
+        val segments = (baseUrl + manga.url).toHttpUrl().pathSegments
+        val i = segments.indexOf("series")
+        return if (i >= 0 && i + 1 < segments.size) segments[i + 1] else segments.last()
+    }
+
     override fun mangaDetailsRequest(manga: SManga): Request {
-        val seriesHash = (baseUrl + manga.url).toHttpUrl().pathSegments.last()
         val episodes = "$apiUrl/episodes".toHttpUrl().newBuilder()
-            .addQueryParameter("seriesHash", seriesHash)
+            .addQueryParameter("seriesHash", seriesHashOf(manga))
             .build()
         return GET(episodes, headers)
     }
@@ -115,9 +128,8 @@ abstract class ComiciViewerAlt(
     override fun getMangaUrl(manga: SManga): String = baseUrl + manga.url
 
     override fun chapterListRequest(manga: SManga): Request {
-        val seriesHash = (baseUrl + manga.url).toHttpUrl().pathSegments.last()
         val url = "$apiUrl/episodes".toHttpUrl().newBuilder()
-            .addQueryParameter("seriesHash", seriesHash)
+            .addQueryParameter("seriesHash", seriesHashOf(manga))
             .addQueryParameter("episodeFrom", "1")
             .addQueryParameter("episodeTo", "9999")
             .build()

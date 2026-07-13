@@ -150,9 +150,9 @@ class BookSakuhin(
     private val sakuhinCode: String,
     private val name: String,
     private val book: Book,
-    private val detail: Detail?,
-    private val isCompleted: Boolean?,
-    private val subgenreTagList: List<SubgenreTag>?,
+    private val detail: Detail? = null,
+    private val isCompleted: Boolean? = null,
+    private val subgenreTagList: List<SubgenreTag>? = null,
 ) {
     @Serializable
     class Detail(
@@ -189,11 +189,11 @@ class Book(
     private val name: String,
     val thumbnail: Thumbnail?,
     private val publicStartDateTime: String?,
-    val isFree: Boolean?,
-    val isPurchased: Boolean?,
-    val rightsExpirationDatetime: String?,
-    val credits: List<Credit>?,
-    val bookContent: BookContent?,
+    val isFree: Boolean? = null,
+    val isPurchased: Boolean? = null,
+    val rightsExpirationDatetime: String? = null,
+    val credits: List<Credit>? = null,
+    val bookContent: BookContent? = null,
 ) {
     @Serializable
     class Thumbnail(

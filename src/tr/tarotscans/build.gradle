@@ -1,9 +1,9 @@
 ext {
     extName = 'Tarot Scans'
     extClass = '.TarotScans'
-    themePkg = 'mangathemesia'
+    themePkg = 'madara'
     baseUrl = 'https://www.tarotscans.com'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = false
 }
 

@@ -2,11 +2,69 @@ package eu.kanade.tachiyomi.extension.en.aquamanga
 
 import android.util.Base64
 import eu.kanade.tachiyomi.multisrc.madara.Madara
+import eu.kanade.tachiyomi.source.model.SChapter
 import okhttp3.Headers
+import org.jsoup.nodes.Element
 import kotlin.random.Random
 
 class AquaManga : Madara("Aqua Manga", "https://aquareader.org", "en") {
     override val useLoadMoreRequest = LoadMoreStrategy.Never
+
+    // The site's /manga/ archive (used for popular/latest listing) was reskinned
+    // to a custom "aqua-archive-card" grid, no longer the stock Madara markup.
+    // Search results (?s=...) still use the stock Madara markup, so those
+    // selectors are left untouched.
+    override fun popularMangaSelector() = "article.aqua-archive-card"
+
+    override val popularMangaUrlSelector = "h3.aqua-archive-card__title a"
+
+    override fun popularMangaNextPageSelector(): String? = "a.next.page-numbers"
+
+    // searchMangaNextPageSelector() defaults to popularMangaNextPageSelector(); restore
+    // the stock selector here since search results still use the old pagination markup.
+    override fun searchMangaNextPageSelector(): String? = "div.nav-previous, nav.navigation-ajax, a.nextpostslink"
+
+    // The manga details ("series") page was reskinned along with the archive grid.
+    // The stock Madara selectors (div.post-title, div.summary_image, div.summary-content, ...)
+    // no longer exist on this markup, and mangaDetailsSelectorTitle is used behind a `!!` in
+    // the base class, so a miss there is a crash (NullPointerException), not just missing data.
+    // Confirmed live on https://aquareader.org/manga/i-was-actually-a-third-generation-chaebol/ :
+    //   <h1 class="aqua-series-info__title">I Was Actually a Third-Generation Chaebol</h1>
+    //   <div class="aqua-series-info__creator">
+    //     <span class="aqua-series-info__creator-label">Author</span>
+    //     <span class="aqua-series-info__creator-value"><a ...>Bathed in Moonlight</a>,...</span>
+    //   </div>
+    //   <div class="aqua-series-info__creator">
+    //     <span class="aqua-series-info__creator-label">Artist</span>
+    //     <span class="aqua-series-info__creator-value"><a ...>Gyu</a></span>
+    //   </div>
+    //   <span class="aqua-series-meta__item aqua-series-meta__status aqua-series-meta__status--ongoing">
+    //     <span class="aqua-status-dot"></span>OnGoing</span>
+    //   <a href="https://aquareader.org/manga-genre/drama/" class="aqua-series-genre-pill">Drama</a>
+    //   <img src="https://aquareader.org/wp-content/uploads/.../cover.jpg" class="aqua-series-cover__img">
+    //   <div class="aqua-series-synopsis" id="aqua-synopsis"><h1>Read ...</h1><p>...</p>...</div>
+    override val mangaDetailsSelectorTitle = "h1.aqua-series-info__title"
+    override val mangaDetailsSelectorAuthor =
+        ".aqua-series-info__creator:has(.aqua-series-info__creator-label:contains(Author)) .aqua-series-info__creator-value a"
+    override val mangaDetailsSelectorArtist =
+        ".aqua-series-info__creator:has(.aqua-series-info__creator-label:contains(Artist)) .aqua-series-info__creator-value a"
+    override val mangaDetailsSelectorStatus = "span.aqua-series-meta__status"
+    override val mangaDetailsSelectorDescription = "#aqua-synopsis"
+    override val mangaDetailsSelectorThumbnail = "img.aqua-series-cover__img"
+    override val mangaDetailsSelectorGenre = "a.aqua-series-genre-pill"
+
+    // The chapter list markup was also reskinned to "aqua-ch-item" anchors
+    // (no nested <a>, so the stock chapterUrlSelector logic can't be reused).
+    override fun chapterListSelector() = "a.aqua-ch-item"
+
+    override fun chapterFromElement(element: Element): SChapter {
+        val chapter = SChapter.create()
+        chapter.url = element.attr("abs:href")
+        chapter.name = element.selectFirst(".aqua-ch-item__name")?.text()
+            ?: element.attr("data-chapter-name")
+        chapter.date_upload = parseRelativeDate(element.selectFirst(".aqua-ch-item__time")?.text().orEmpty())
+        return chapter
+    }
 
     override fun headersBuilder(): Headers.Builder = super.headersBuilder()
         .add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")

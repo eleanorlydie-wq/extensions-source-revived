@@ -24,10 +24,10 @@ class PageProps<T>(
 
 @Serializable
 class MangaListDto(
-    val titleSections: List<MangaSectionDto>?, // Popular/Finished
-    val sections: List<SearchSectionDto>?, // Search
-    val ongoingTitleSection: MangaSectionDto?, // GA
-    val finishedTitleSection: MangaSectionDto?, // GA
+    val titleSections: List<MangaSectionDto>? = null, // Popular/Finished
+    val sections: List<SearchSectionDto>? = null, // Search
+    val ongoingTitleSection: MangaSectionDto? = null, // GA
+    val finishedTitleSection: MangaSectionDto? = null, // GA
 )
 
 @Serializable
@@ -83,11 +83,11 @@ class MangaDetailDefaultDto(
 
 @Serializable
 class ChapterDto(
-    private val id: Int?,
-    val status: Int?,
+    private val id: Int? = null,
+    val status: Int? = null,
     private val mainText: String,
-    private val subText: String?,
-    private val publishingPeriod: String?,
+    private val subText: String? = null,
+    private val publishingPeriod: String? = null,
 ) {
     fun toSChapter(mangaUrl: String, dateFormat: SimpleDateFormat): SChapter = SChapter.create().apply {
         url = "$mangaUrl/chapter/$id"
@@ -103,8 +103,8 @@ class PageListDto(
 
 @Serializable
 class PageDto(
-    val image: PageImageUrlDto?,
-    val linkImage: PageImageUrlDto?,
+    val image: PageImageUrlDto? = null,
+    val linkImage: PageImageUrlDto? = null,
 )
 
 @Serializable

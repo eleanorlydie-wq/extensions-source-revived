@@ -8,6 +8,12 @@ class SearchDto(
 )
 
 @Serializable
+class ObrasDto(
+    val series: List<MangaDto>,
+    val totalPages: Int = 1,
+)
+
+@Serializable
 class MangaDto(
     val title: String,
     val slug: String,
