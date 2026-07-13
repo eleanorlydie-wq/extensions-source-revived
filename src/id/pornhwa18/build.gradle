@@ -1,9 +1,7 @@
 ext {
     extName = 'Pornhwa18'
     extClass = '.Pornhwa18'
-    themePkg = 'madara'
-    baseUrl = 'https://pornhwa18.com'
-    overrideVersionCode = 0
+    extVersionCode = 1
     isNsfw = true
 }
 

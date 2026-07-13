@@ -15,7 +15,7 @@ class ApiResponse<T>(
 
 @Serializable
 class ApiResponseError(
-    val errors: List<ApiErrorMessages>?,
+    val errors: List<ApiErrorMessages>? = null,
 )
 
 @Serializable
@@ -75,23 +75,27 @@ class ApiMangaObject(
     val manga: ApiMangaData,
 )
 
+// Nullable is not the same as optional: without a default, kotlinx.serialization throws
+// MissingFieldException when a key is absent rather than present-and-null. Each GraphQL query here
+// selects a different subset of these fields (the details query doesn't ask for `chapters` at all),
+// so anything not defaulted blows up as soon as a query omits it.
 @Serializable
 class ApiMangaData(
-    val title: String?,
-    val status: String?,
-    val image: String?,
-    val author: String?,
-    val artist: String?,
-    val genres: String?,
-    val description: String?,
-    val alternativeTitle: String?,
-    val slug: String?,
-    val chapters: List<ApiMangaChapterList>?,
+    val title: String? = null,
+    val status: String? = null,
+    val image: String? = null,
+    val author: String? = null,
+    val artist: String? = null,
+    val genres: String? = null,
+    val description: String? = null,
+    val alternativeTitle: String? = null,
+    val slug: String? = null,
+    val chapters: List<ApiMangaChapterList>? = null,
 )
 
 @Serializable
 class ApiMangaChapterList(
-    val number: Float,
-    val title: String,
-    val date: String,
+    val number: Float = 0f,
+    val title: String = "",
+    val date: String = "",
 )

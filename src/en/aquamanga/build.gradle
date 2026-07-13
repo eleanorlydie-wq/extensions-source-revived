@@ -3,7 +3,7 @@ ext {
     extClass = '.AquaManga'
     themePkg = 'madara'
     baseUrl = 'https://aquareader.org'
-    overrideVersionCode = 11
+    overrideVersionCode = 13
     isNsfw = false
 }
 

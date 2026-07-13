@@ -3,7 +3,7 @@ ext {
     extClass = '.MurimScan'
     themePkg = 'zeistmanga'
     baseUrl = 'https://www.murimscans.site'
-    overrideVersionCode = 36
+    overrideVersionCode = 37
     isNsfw = true
 }
 

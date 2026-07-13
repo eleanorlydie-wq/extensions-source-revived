@@ -1,29 +1,26 @@
 package eu.kanade.tachiyomi.extension.pt.littletyrant
 
-import android.util.Base64
 import org.jsoup.nodes.Document
 
 class Decoder {
-    fun extractPaths(document: Document): List<String> {
-        val urlScript = document.selectFirst("script:containsData(var pages)")?.data()
+    // The reader now embeds a `_proxyUrls` array of relative image-loader.php paths
+    // instead of the old base64-encoded `var pages` array.
+    fun extractPaths(document: Document, baseUrl: String): List<String> {
+        val script = document.selectFirst("script:containsData(_proxyUrls)")?.data()
             ?: error("No image URLs")
 
-        val match = PAGES_REGEX.find(urlScript) ?: error("Unable to parse pages")
+        val match = PROXY_URLS_REGEX.find(script) ?: error("Unable to parse pages")
 
         return match.groupValues[1]
             .split(",")
-            .map { it.trim().trim('"').trim('\'') }
+            .map { it.trim().trim('"').trim('\'').replace("\\/", "/") }
             .filter { it.isNotEmpty() }
-            .map { base64 ->
-                Base64.decode(base64, Base64.DEFAULT)
-                    .toString(Charsets.UTF_8)
-                    .trim()
-            }
+            .map { path -> if (path.startsWith("http")) path else baseUrl + path }
     }
 
     companion object {
-        private val PAGES_REGEX = Regex(
-            """var pages\s*=\s*\[(.*?)\]""",
+        private val PROXY_URLS_REGEX = Regex(
+            """var _proxyUrls\s*=\s*\[(.*?)\]""",
             RegexOption.DOT_MATCHES_ALL,
         )
     }

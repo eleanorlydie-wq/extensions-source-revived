@@ -1,69 +1,57 @@
 package eu.kanade.tachiyomi.extension.id.inazumanga
 
 import eu.kanade.tachiyomi.multisrc.zeistmanga.ZeistManga
-import eu.kanade.tachiyomi.source.model.MangasPage
+import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.asJsoup
 import okhttp3.Response
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
+import org.jsoup.Jsoup
 
 class ReYume : ZeistManga("ReYume", "https://www.re-yume.my.id", "id") {
 
-    override val popularMangaSelector = "#Side div.group"
-    override val popularMangaSelectorTitle = "h3"
-    override val popularMangaSelectorUrl = "a"
+    // Homepage was redesigned: popular manga now lives in the "Manga" tab of the
+    // popular-posts widget as <article class="pop-card"> cards, not the old
+    // "#Side div.group" layout.
+    override val popularMangaSelector = "#PopularPosts2 article.pop-card"
+    override val popularMangaSelectorTitle = "h4 > a"
+    override val popularMangaSelectorUrl = "h4 > a"
 
     override val mangaDetailsSelector = "#main"
-    override val pageListSelector = "div.i_img"
-
-    override fun popularMangaParse(response: Response): MangasPage {
-        val document = response.asJsoup()
-        val mangas = document.select(popularMangaSelector).map { element ->
-            SManga.create().apply {
-                thumbnail_url = element.selectFirst("a").getStyleUrl()
-                title = element.selectFirst(popularMangaSelectorTitle)!!.text()
-                setUrlWithoutDomain(element.selectFirst(popularMangaSelectorUrl)!!.absUrl("href"))
-            }
-        }
-        return MangasPage(mangas, false)
-    }
 
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
         val profileManga = document.selectFirst(mangaDetailsSelector)!!
         return SManga.create().apply {
-            thumbnail_url = profileManga.selectFirst("div.thum").getStyleUrl()
-            title = profileManga.selectFirst("#post-title")!!.text()
-            description = profileManga.selectFirst("#syn_bod")?.text()?.trim()
-            genre = profileManga.select("a[rel=tag]").joinToString { it.text() }
-            author = profileManga.selectFirst("span#tauther")?.text()?.trim()
-            artist = profileManga.selectFirst("span#tartist")?.text()?.trim()
+            thumbnail_url = profileManga.selectFirst("img")?.attr("abs:src")
+            title = profileManga.selectFirst("h1[itemprop=name]")!!.text()
+            description = profileManga.selectFirst("#synopsis")?.text()?.trim()
+            genre = profileManga.select("#append-info div.col-span-2 a[rel=tag]").joinToString { it.text() }
+            author = profileManga.selectFirst("#extra-info dt:contains(Author) + dd")?.text()?.trim()
+            artist = profileManga.selectFirst("#extra-info dt:contains(Artist) + dd")?.text()?.trim()
 
-            profileManga.selectFirst("span#talternative")?.text()?.takeIf { it.isNotBlank() }?.let {
-                description = listOfNotNull(description?.takeIf { it.isNotBlank() }, "Alternative title(s): $it").joinToString("\n\n")
-            }
+            profileManga.selectFirst("#extra-info dt:contains(Alternative) + dd")?.text()?.trim()
+                ?.takeIf { it.isNotBlank() && it != "-" }
+                ?.let {
+                    description = listOfNotNull(description?.takeIf { d -> d.isNotBlank() }, "Alternative title(s): $it")
+                        .joinToString("\n\n")
+                }
 
-            val statusElement = profileManga.select(".capitalize").firstOrNull {
-                val text = it.text().lowercase().trim()
-                text in statusOnGoingList || text in statusCompletedList || text in statusHiatusList || text in statusCancelledList
-            }
-            status = parseStatus(statusElement?.text() ?: "Unknown")
+            val statusText = profileManga.selectFirst("#append-info dt:contains(Status) + dd")?.text()?.trim() ?: "Unknown"
+            status = parseStatus(statusText)
         }
     }
 
-    override fun getChapterFeedUrl(doc: Document): String {
-        val label = doc.selectFirst(".chapter_get")?.attr("data-labelchapter")
-            ?: throw Exception("Failed to find chapter feed label")
-        return apiUrl(label).build().toString()
-    }
+    // Chapter reader images are no longer rendered into visible DOM; the real
+    // <div class="separator">...<img></div> markup is stashed as escaped text
+    // inside a hidden <textarea id="zeist-raw-data"> and re-injected by client JS.
+    override val pageListSelector = "#zeist-raw-data"
 
-    private fun Element?.getStyleUrl(): String? {
-        val style = this?.attr("style") ?: return null
-        return STYLE_URL_REGEX.find(style)?.groupValues?.get(1)
-    }
-
-    companion object {
-        private val STYLE_URL_REGEX = """url\(['"]*(.*?)['"]*\)""".toRegex()
+    override fun pageListParse(response: Response): List<Page> {
+        val document = response.asJsoup()
+        val rawData = document.selectFirst(pageListSelector)?.text().orEmpty()
+        val content = Jsoup.parse(rawData)
+        return content.select("div.separator img[src]").mapIndexed { i, img ->
+            Page(i, "", img.attr("src"))
+        }
     }
 }

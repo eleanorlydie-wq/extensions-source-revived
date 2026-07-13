@@ -104,13 +104,18 @@ class ViewerImage(
 // Json
 @Serializable
 class RscRankingContainer(
-    val rankingList: List<RscRankingCategory>,
+    val initialRankingLists: List<RscRankingCategory>,
 )
 
 @Serializable
 class RscRankingCategory(
-    val rankingTypeName: String,
-    val titles: List<RscRankingTitle>,
+    val tagName: String,
+    val rankingList: RscRankingList,
+)
+
+@Serializable
+class RscRankingList(
+    val titles: List<RscRankingTitle>? = null,
 )
 
 @Serializable

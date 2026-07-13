@@ -11,6 +11,7 @@ import keiyoushi.network.rateLimit
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.jsoup.nodes.Document
+import org.jsoup.select.Elements
 import rx.Observable
 
 class MangaCan :
@@ -29,6 +30,13 @@ class MangaCan :
     override val seriesGenreSelector = ".seriestugenre a[href*=genre]"
 
     override val pageSelector = "div.images img"
+
+    // mangacanblog.com's site redesign left some manga detail pages (e.g. legacy
+    // "/baca-komik-*-online-terbaru.html" URLs) with no cover image markup at all under
+    // seriesThumbnailSelector. The base class's Elements.imgAttr() does `.first()!!`, which
+    // NPEs on an empty selection and crashes fetchMangaDetails the instant a user opens such
+    // a title. Fall back to an empty thumbnail instead of crashing when no image element exists.
+    override fun Elements.imgAttr(): String = this.firstOrNull()?.imgAttr() ?: ""
 
     override fun imageRequest(page: Page): Request = super.imageRequest(page).newBuilder()
         .removeHeader("Referer")

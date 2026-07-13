@@ -3,7 +3,7 @@ ext {
     extClass = ".MeHentai"
     themePkg = "manhwaz"
     baseUrl = "https://mehentai.blog"
-    overrideVersionCode = 6
+    overrideVersionCode = 7
     isNsfw = true
 }
 

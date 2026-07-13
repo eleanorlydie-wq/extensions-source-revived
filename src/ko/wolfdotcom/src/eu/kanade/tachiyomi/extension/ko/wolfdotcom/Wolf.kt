@@ -156,14 +156,14 @@ open class Wolf(
 
         parseSearchFilters(document)
 
-        browseCache = document.select(".webtoon-list > ul > li > a").map {
+        browseCache = document.select(".thumb-grid > a.t-card").map {
             val id = it.absUrl("href").toHttpUrl()
                 .queryParameter("toon")!!.toInt()
 
             BrowseItem(
                 id = id,
-                title = it.selectFirst(".txt > .subject")!!.ownText(),
-                cover = it.selectFirst(".img > img")?.attr("data-original"),
+                title = it.selectFirst(".t-title")!!.text(),
+                cover = it.selectFirst(".t-img img")?.attr("src"),
             )
         }.chunked(20)
     }
@@ -180,34 +180,28 @@ open class Wolf(
     )
 
     private val specialChars = Regex("""[^\p{InHangul_Syllables}0-9a-z ]""", RegexOption.IGNORE_CASE)
-    private val styleImage = Regex("""background-image:url\(([^)]+)\)""")
 
     private fun querySearch(query: String): Observable<MangasPage> {
         if (query.length < 2) {
             throw Exception("두 글자 이상 입력 해주세요.")
         }
         val stdQuery = query.replace(specialChars, "")
-        val searchUrl = "$baseUrl/search.html?q=${URLEncoder.encode(stdQuery, "EUC-KR")}"
+        val searchUrl = "$baseUrl/sh?q=${URLEncoder.encode(stdQuery, "EUC-KR")}"
 
         return client.newCall(GET(searchUrl, headers))
             .asObservableSuccess()
             .map { response ->
-                val document = Jsoup.parseBodyFragment(response.body.string(), searchUrl)
-                val entries = document.select("article.searchItem")
+                val document = response.asJsoup()
+                val entries = document.select(".thumb-grid > a.t-card")
                     .filter { el ->
-                        el.selectFirst("a.searchLink")!!.attr("href").contains(entryPath)
+                        el.attr("href").contains(entryPath)
                     }
                     .map { el ->
-                        val mangaUrl = el.selectFirst("a.searchLink")!!.absUrl("href")
-                            .toHttpUrl()
+                        val mangaUrl = el.absUrl("href").toHttpUrl()
                         SManga.create().apply {
                             url = mangaUrl.queryParameter("toon")!!
-                            title = el.selectFirst(".searchDetailTitle")!!.text()
-                            thumbnail_url = el.selectFirst(".searchPng")
-                                ?.attr("style")
-                                ?.let {
-                                    styleImage.find(it)?.groupValues?.get(1)
-                                }
+                            title = el.selectFirst(".t-title")!!.text()
+                            thumbnail_url = el.selectFirst(".t-img img")?.attr("src")
                         }
                     }
 
@@ -226,11 +220,13 @@ open class Wolf(
         val document = response.asJsoup()
 
         return SManga.create().apply {
-            title = document.selectFirst(".text-box h1")!!.text()
-            thumbnail_url = document.selectFirst(".img-box img")?.absUrl("src")
-            description = document.selectFirst(".text-box .txt")?.text()
-            genre = document.selectFirst(".text-box .sub:has(> strong:contains(장르))")?.ownText()?.replace("/", ", ")
-            author = document.selectFirst(".text-box .sub:has(> strong:contains(작가))")?.ownText()?.replace("/", ", ")
+            title = document.selectFirst(".w-title")!!.text()
+            thumbnail_url = document.selectFirst(".thumb-wrap img")?.absUrl("src")
+            description = document.selectFirst(".summary-wrap .summary")?.text()
+            genre = document.select(".genre-tags a.gtag").eachText()
+                .map { it.removePrefix("#") }
+                .joinToString(", ")
+                .ifEmpty { null }
         }
     }
 
@@ -245,15 +241,15 @@ open class Wolf(
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
 
-        return document.select(".webtoon-bbs-list a.view_open").map { el ->
+        return document.select(".list-sec a.ep-item").map { el ->
             val chapUrl = el.absUrl("href").toHttpUrl()
             SChapter.create().apply {
                 url = ChapterUrl(
                     chapUrl.queryParameter("toon")!!,
                     chapUrl.queryParameter("num")!!,
                 ).toJsonString()
-                name = el.selectFirst(".subject")!!.ownText()
-                date_upload = dateFormat.tryParse(el.selectFirst(".date")?.text())
+                name = el.selectFirst(".ep-title")!!.text()
+                date_upload = dateFormat.tryParse(el.selectFirst(".ep-date")?.text())
             }
         }
     }
@@ -275,8 +271,8 @@ open class Wolf(
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
 
-        return document.select(".image-view img").mapIndexed { idx, img ->
-            Page(idx, imageUrl = img.absUrl("data-original"))
+        return document.select(".vimg-area img").mapIndexed { idx, img ->
+            Page(idx, imageUrl = img.absUrl("data-src"))
         }
     }
 
@@ -335,7 +331,7 @@ open class Wolf(
 
         if (url.contains(domainRegex)) {
             val document = Jsoup.parse(response.peekBody(Long.MAX_VALUE).string())
-            val newUrl = document.selectFirst("""#pop-content a[href~=^https?://wfwf\d+\.com]""")
+            val newUrl = document.selectFirst("""a.main-btn[href~=^https?://wfwf\d+\.com]""")
                 ?: return response
 
             response.close()
@@ -379,3 +375,11 @@ open class Wolf(
 
 private const val PREF_DOMAIN_NUM = "domain_number"
 private const val PREF_DOMAIN_NUM_DEFAULT = "domain_number_default"
+
+// Was previously codegen'd at Gradle build time (see git history of build.gradle) by scraping
+// the current mirror number from a lookup domain. That lookup domain no longer serves the
+// expected redirect (404s as of 2026-07-13), and the raw-kotlinc audit harness never runs Gradle
+// tasks at all, so the constant must live in source. Verified live: https://wfwf417.com/ serves
+// the real "늑대닷컴 - 연재웹툰" site; the user preference and domainNumberInterceptor above still
+// let this self-heal if/when the mirror rotates again.
+private const val DEFAULT_DOMAIN_NUMBER = "417"

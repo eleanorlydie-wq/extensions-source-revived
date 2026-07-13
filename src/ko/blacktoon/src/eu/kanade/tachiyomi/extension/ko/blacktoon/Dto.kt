@@ -24,7 +24,7 @@ class SeriesItem(
     private val tagIds: String = "",
     @SerialName("c")
     private val platformId: String = "-1",
-    @SerialName("d")
+    @SerialName("pd")
     private val publishDayId: String = "-1",
     @SerialName("h")
     val hot: Int = 0,

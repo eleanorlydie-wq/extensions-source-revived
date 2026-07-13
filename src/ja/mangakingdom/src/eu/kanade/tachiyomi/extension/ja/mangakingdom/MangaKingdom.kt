@@ -192,7 +192,7 @@ class MangaKingdom :
                 }
 
                 SChapter.create().apply {
-                    val book = it.selectFirst("h2.book-chapter--title a")!!
+                    val book = it.selectFirst("h3.book-chapter--title a")!!
                     val trimmedName = book.text().replace(title, "")
                     name = prefix + trimmedName
 

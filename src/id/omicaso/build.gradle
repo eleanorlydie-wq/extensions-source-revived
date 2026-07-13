@@ -1,9 +1,8 @@
 ext {
     extName = 'Omicaso'
     extClass = '.Omicaso'
-    themePkg = 'mangathemesia'
     baseUrl = 'https://omicaso.org'
-    overrideVersionCode = 3
+    extVersionCode = 4
     isNsfw = true
 }
 

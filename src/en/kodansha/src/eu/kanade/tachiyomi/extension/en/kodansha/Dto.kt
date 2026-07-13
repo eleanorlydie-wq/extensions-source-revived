@@ -112,7 +112,7 @@ class ChapterResponse(
     private val publishDate: String?,
     private val readable: Readable?,
     private val variants: List<Variant>?,
-    val chapters: List<ChapterResponse>?,
+    val chapters: List<ChapterResponse>? = null,
     private val chapterNumber: Int?,
     private val volumeNumber: Int?,
 ) {

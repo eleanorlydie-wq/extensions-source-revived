@@ -3,7 +3,7 @@ ext {
     extClass = '.ShonenJumpPlus'
     themePkg = 'gigaviewer'
     baseUrl = 'https://shonenjumpplus.com'
-    overrideVersionCode = 2
+    overrideVersionCode = 3
     isNsfw = false
 }
 
