@@ -7,7 +7,7 @@ import java.util.Locale
 class MangaSpark :
     Madara(
         "MangaSpark",
-        "https://manga-spark.net",
+        "https://sparkmanga.net",
         "ar",
         dateFormat = SimpleDateFormat("d MMMM، yyyy", Locale("ar")),
     ) {

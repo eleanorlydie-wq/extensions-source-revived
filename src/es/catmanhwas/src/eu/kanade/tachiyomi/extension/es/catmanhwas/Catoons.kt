@@ -41,7 +41,7 @@ class Catoons : HttpSource() {
 
     override val name = "Catoons"
 
-    override val baseUrl = "https://newcat1.xyz"
+    override val baseUrl = "https://cattoons.org"
 
     override val lang = "es"
 
