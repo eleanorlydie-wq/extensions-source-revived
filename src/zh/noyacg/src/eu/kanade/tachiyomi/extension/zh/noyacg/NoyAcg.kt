@@ -29,7 +29,7 @@ class NoyAcg :
     override val name = "NoyAcg"
     override val lang = "zh"
     override val supportsLatest = true
-    override val baseUrl = "https://beta.noyteam.online"
+    override val baseUrl = "https://noymanga.com"
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         getPreferencesInternal(screen.context).forEach(screen::addPreference)
