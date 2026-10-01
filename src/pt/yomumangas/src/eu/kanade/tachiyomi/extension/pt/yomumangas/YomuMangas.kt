@@ -20,7 +20,7 @@ import java.util.TimeZone
 class YomuMangas : HttpSource() {
 
     override val name = "Yomu Mangás"
-    override val baseUrl = "https://yomumangas.com"
+    override val baseUrl = "https://global.yomumangas.com"
     private val apiUrl = "https://api.yomumangas.com"
     override val lang = "pt-BR"
     override val supportsLatest = true
