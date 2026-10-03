@@ -2,6 +2,6 @@ package eu.kanade.tachiyomi.extension.en.toonilyme
 
 import eu.kanade.tachiyomi.multisrc.madtheme.MadTheme
 
-class ToonilyMe : MadTheme("Toonily.me", "https://toondex.io", "en") {
+class ToonilyMe : MadTheme("Toonily.me", "https://toontop.io", "en") {
     override val useSlugSearch = true
 }

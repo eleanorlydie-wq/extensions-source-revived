@@ -5,6 +5,6 @@ import eu.kanade.tachiyomi.multisrc.keyoapp.Keyoapp
 class SirenScans :
     Keyoapp(
         "Siren Scans",
-        "https://sirenscans.com",
+        "https://sirenscans.org",
         "en",
     )

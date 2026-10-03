@@ -2,8 +2,8 @@ ext {
     extName = 'Kuroi Manga'
     extClass = '.KuroiManga'
     themePkg = 'madara'
-    baseUrl = 'https://kuroimanga.best'
-    overrideVersionCode = 5
+    baseUrl = 'https://kuroimanga.site'
+    overrideVersionCode = 6
     isNsfw = true
 }
 

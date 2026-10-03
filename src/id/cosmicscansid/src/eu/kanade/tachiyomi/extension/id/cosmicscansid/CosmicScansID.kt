@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.seconds
 class CosmicScansID :
     MangaThemesia(
         "CosmicScans.id",
-        "https://lc1.cosmicscans.to",
+        "https://04.cosmicscans.to",
         "id",
         dateFormat = SimpleDateFormat("MMMM dd, yyyy", Locale("id")),
     ),

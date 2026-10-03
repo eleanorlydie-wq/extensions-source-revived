@@ -26,7 +26,7 @@ import java.util.TimeZone
 class Panomic : HttpSource() {
     override val name = "Panomic"
     override val lang = "vi"
-    override val baseUrl = "https://panomic1.info"
+    override val baseUrl = "https://panomic.online"
     override val supportsLatest = true
 
     override val client = network.client.newBuilder()

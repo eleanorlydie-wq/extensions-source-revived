@@ -15,7 +15,7 @@ import java.util.Locale
 class OtaScans :
     Madara(
         "Ota Scans",
-        "https://yurilabs.my.id",
+        "https://yurilab.top",
         "id",
         SimpleDateFormat("d MMMM yyyy", Locale.ENGLISH),
     ) {

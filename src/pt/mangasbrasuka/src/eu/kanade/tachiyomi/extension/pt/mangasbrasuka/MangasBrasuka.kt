@@ -13,7 +13,7 @@ import java.util.Locale
 class MangasBrasuka :
     Madara(
         "Mangas Brasuka",
-        "https://mangasbrasuka.com.br",
+        "https://mangasbrasuka.org",
         "pt-BR",
         SimpleDateFormat("MM/dd/yyyy", Locale.ROOT),
     ) {

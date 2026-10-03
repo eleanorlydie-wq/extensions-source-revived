@@ -2,8 +2,8 @@ ext {
     extName = 'Yaoihub'
     extClass = '.Yaoihub'
     themePkg = 'madara'
-    baseUrl = 'https://yaoihub.net'
-    overrideVersionCode = 2
+    baseUrl = 'https://yaoihub.org'
+    overrideVersionCode = 3
     isNsfw = true
 }
 

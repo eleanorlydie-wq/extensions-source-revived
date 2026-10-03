@@ -7,7 +7,7 @@ import java.util.Locale
 class ZinmangaNet :
     Madara(
         "Zinmanga.net",
-        "https://zinmanga.net",
+        "https://www.zinmanga.net",
         "en",
         dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.ROOT),
     ) {

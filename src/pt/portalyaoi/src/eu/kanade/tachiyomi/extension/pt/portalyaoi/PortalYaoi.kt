@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.seconds
 class PortalYaoi :
     Madara(
         "Portal Yaoi",
-        "https://lerboyslove.com",
+        "https://portalyaoi.com",
         "pt-BR",
         SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")),
     ) {

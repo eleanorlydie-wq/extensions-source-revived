@@ -1,9 +1,0 @@
-ext {
-    extName = 'FlameScans.lol'
-    extClass = '.FlameScanslol'
-    baseUrl = 'https://flamecomics.xyz'
-    extVersionCode = 3
-    isNsfw = false
-}
-
-apply plugin: "kei.plugins.extension.legacy"

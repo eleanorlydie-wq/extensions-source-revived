@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.extension.ja.rawbaka
 
 import eu.kanade.tachiyomi.multisrc.madara.Madara
 
-class RawBaka : Madara("RawBaka", "https://rawbaka.com", "ja") {
+class RawBaka : Madara("RawBaka", "https://rawbaka.site", "ja") {
     override val mangaEntrySelector = ".text"
     override val useLoadMoreRequest = LoadMoreStrategy.Never
     override val useNewChapterEndpoint = true

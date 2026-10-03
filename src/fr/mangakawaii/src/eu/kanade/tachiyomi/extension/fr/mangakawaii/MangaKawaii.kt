@@ -19,7 +19,7 @@ import java.util.Locale
 class MangaKawaii : HttpSource() {
 
     override val name = "Mangakawaii"
-    override val baseUrl = "https://www.mangakawaii.io"
+    override val baseUrl = "https://www.mangakawaii.fr"
     private val cdnUrl = "https://cdn2.mangakawaii.io"
     override val lang = "fr"
     override val supportsLatest = true

@@ -2,8 +2,8 @@ ext {
     extName = 'Hayalistic'
     extClass = '.Hayalistic'
     themePkg = 'madara'
-    baseUrl = 'https://hayalistic.blog'
-    overrideVersionCode = 5
+    baseUrl = 'https://hayalistic.online'
+    overrideVersionCode = 6
     isNsfw = false
 }
 

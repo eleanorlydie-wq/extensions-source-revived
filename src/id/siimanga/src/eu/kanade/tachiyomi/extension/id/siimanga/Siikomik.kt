@@ -7,7 +7,7 @@ import org.jsoup.nodes.Element
 class Siikomik :
     Madara(
         "Siikomik",
-        "https://siikomik.net",
+        "https://siikomik.id",
         "id",
     ) {
     override val versionId = 3

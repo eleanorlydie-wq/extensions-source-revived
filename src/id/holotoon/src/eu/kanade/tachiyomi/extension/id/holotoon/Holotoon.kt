@@ -7,7 +7,7 @@ import java.util.Locale
 class Holotoon :
     Madara(
         "Holotoon",
-        "https://01.holotoon.site",
+        "https://holodek.run",
         "id",
         dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.ENGLISH),
     ) {

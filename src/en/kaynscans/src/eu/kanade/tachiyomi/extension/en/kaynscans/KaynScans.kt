@@ -10,7 +10,7 @@ class KaynScans :
     Iken(
         "Kayn Scans",
         "en",
-        "https://kaynscan.org",
+        "https://kaynscans.com",
         "https://api.kaynscan.org",
     ) {
 

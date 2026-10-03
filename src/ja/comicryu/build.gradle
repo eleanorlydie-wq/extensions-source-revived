@@ -1,7 +1,7 @@
 ext {
     extName = 'Comic Ryu'
     extClass = '.ComicRyu'
-    extVersionCode = 1
+    extVersionCode = 2
     isNsfw = false
 }
 apply plugin: "kei.plugins.extension.legacy"

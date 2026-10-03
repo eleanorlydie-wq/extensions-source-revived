@@ -5,7 +5,7 @@ import eu.kanade.tachiyomi.multisrc.mangathemesia.MangaThemesia
 class Armageddon :
     MangaThemesia(
         name = "Armageddon",
-        baseUrl = "https://www.silentquill.net",
+        baseUrl = "https://silentquill.net",
         lang = "en",
     ) {
     override val seriesTitleSelector = "h1.kdt8-left-title"

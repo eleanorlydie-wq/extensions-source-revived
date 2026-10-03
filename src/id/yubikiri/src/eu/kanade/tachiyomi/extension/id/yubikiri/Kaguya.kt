@@ -17,7 +17,7 @@ import kotlin.time.Duration.Companion.minutes
 class Kaguya :
     Madara(
         "Kaguya",
-        "https://v1.kaguya.pro",
+        "https://01.kaguya.pro",
         "id",
         dateFormat = SimpleDateFormat("d MMMM", Locale("en")),
     ) {
