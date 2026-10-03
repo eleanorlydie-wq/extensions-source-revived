@@ -21,7 +21,7 @@ class NoxManga : HttpSource() {
 
     override val name: String = "NoxManga"
 
-    override val baseUrl: String = "https://noxtoons.com"
+    override val baseUrl: String = "https://noxmangas.org"
 
     override val lang: String = "pt-BR"
 

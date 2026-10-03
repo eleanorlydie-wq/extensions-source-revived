@@ -209,9 +209,9 @@ class NewManhwa :
 
     companion object {
         private const val PREF_BASE_URL = "pref_base_url"
-        private const val DEFAULT_BASE_URL = "https://newmanhwa.com"
+        private const val DEFAULT_BASE_URL = "https://saymanhwa.com"
         private val MIRRORS = arrayOf(
-            "https://newmanhwa.com",
+            "https://saymanhwa.com",
             "https://fullmanhwa.com",
         )
         private val MIRROR_HOSTS = MIRRORS.map { it.toHttpUrl().host }

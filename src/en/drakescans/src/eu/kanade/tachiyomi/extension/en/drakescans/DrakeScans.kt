@@ -15,7 +15,7 @@ import kotlin.time.Duration.Companion.seconds
 class DrakeScans :
     MangaThemesia(
         "Drake Scans",
-        "https://drakecomic.org",
+        "https://drakecomic.net",
         "en",
     ),
     ConfigurableSource {

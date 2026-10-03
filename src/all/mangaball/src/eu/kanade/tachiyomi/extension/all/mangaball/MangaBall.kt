@@ -40,7 +40,7 @@ class MangaBall(
     ConfigurableSource {
 
     override val name = "Manga Ball"
-    private val domain = "mangaball.net"
+    private val domain = "mangaball.com"
     override val baseUrl = "https://$domain"
     override val supportsLatest = true
     private val preferences by getPreferencesLazy()

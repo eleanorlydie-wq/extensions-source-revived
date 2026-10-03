@@ -6,7 +6,7 @@ class HotComics :
     HotComics(
         "HotComics",
         "en",
-        "https://hotcomics.me",
+        "https://hotcomics.io",
     ) {
     override val browseList = listOf(
         Pair("Home", "en"),

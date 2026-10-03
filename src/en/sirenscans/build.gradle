@@ -2,8 +2,8 @@ ext {
     extName = 'Siren Scans'
     extClass = '.SirenScans'
     themePkg = 'keyoapp'
-    baseUrl = 'https://sirenscans.com'
-    overrideVersionCode = 0
+    baseUrl = 'https://sirenscans.org'
+    overrideVersionCode = 1
     isNsfw = false
 }
 

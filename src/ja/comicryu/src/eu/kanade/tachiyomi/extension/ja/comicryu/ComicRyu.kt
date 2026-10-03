@@ -17,7 +17,7 @@ import okhttp3.Response
 class ComicRyu : HttpSource() {
     override val name = "Comic Ryu"
     private val domain = "comic-ryu.jp"
-    override val baseUrl = "https://www.$domain"
+    override val baseUrl = "https://$domain"
     override val lang = "ja"
     override val supportsLatest = true
 

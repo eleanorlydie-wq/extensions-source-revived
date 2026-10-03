@@ -6,7 +6,7 @@ import keiyoushi.network.rateLimit
 class ColorcitoScan :
     SpicyTheme(
         name = "Colorcito Scan",
-        baseUrl = "https://colorcitoscan.com",
+        baseUrl = "https://colorcitotoons.site",
         apiBaseUrl = "https://api.colorcitoscan.com",
         lang = "es",
     ) {

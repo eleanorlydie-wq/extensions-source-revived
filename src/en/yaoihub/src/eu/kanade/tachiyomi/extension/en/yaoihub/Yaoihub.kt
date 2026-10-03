@@ -5,7 +5,7 @@ import keiyoushi.network.rateLimit
 import okhttp3.OkHttpClient
 import kotlin.time.Duration.Companion.seconds
 
-class Yaoihub : Madara("Yaoihub", "https://yaoihub.net", "en") {
+class Yaoihub : Madara("Yaoihub", "https://yaoihub.org", "en") {
 
     override val client: OkHttpClient = super.client.newBuilder()
         .rateLimit(1, 2.seconds)

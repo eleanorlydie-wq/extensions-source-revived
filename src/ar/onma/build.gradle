@@ -2,8 +2,8 @@ ext {
     extName = 'Onma'
     extClass = '.Onma'
     themePkg = 'mmrcms'
-    baseUrl = 'https://onma.me'
-    overrideVersionCode = 3
+    baseUrl = 'https://onma.top'
+    overrideVersionCode = 4
     isNsfw = false
 }
 

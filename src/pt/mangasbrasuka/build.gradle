@@ -2,8 +2,8 @@ ext {
     extName = 'Mangas Brasuka'
     extClass = '.MangasBrasuka'
     themePkg = 'madara'
-    baseUrl = 'https://mangasbrasuka.com.br'
-    overrideVersionCode = 2
+    baseUrl = 'https://mangasbrasuka.org'
+    overrideVersionCode = 3
     isNsfw = true
 }
 

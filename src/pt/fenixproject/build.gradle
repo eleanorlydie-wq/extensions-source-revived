@@ -2,8 +2,8 @@ ext {
     extName = 'Fenix Project'
     extClass = '.FenixProject'
     themePkg = 'madara'
-    baseUrl = 'https://fenixproject.site'
-    overrideVersionCode = 4
+    baseUrl = 'https://fenixproject.website'
+    overrideVersionCode = 5
     isNsfw = true
 }
 

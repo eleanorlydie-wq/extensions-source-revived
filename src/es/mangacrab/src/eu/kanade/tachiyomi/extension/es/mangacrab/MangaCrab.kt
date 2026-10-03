@@ -29,7 +29,7 @@ import kotlin.time.Duration.Companion.seconds
 class MangaCrab :
     Madara(
         "Manga Crab",
-        "https://mangacrab.org",
+        "https://es.mangacrab.org",
         "es",
         SimpleDateFormat("dd/MM/yyyy", Locale("es")),
     ),
