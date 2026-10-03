@@ -14,7 +14,7 @@ import kotlin.time.Duration.Companion.seconds
 class MugiwarasOficial :
     Madara(
         "Mugiwaras Oficial",
-        "https://mugiwarasoficial.com",
+        "https://mugiwarasoficial.org",
         "pt-BR",
         SimpleDateFormat("d 'de' MMM 'de' yyyy", Locale("pt", "BR")),
     ) {

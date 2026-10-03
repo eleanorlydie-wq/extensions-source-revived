@@ -6,7 +6,7 @@ import eu.kanade.tachiyomi.source.model.FilterList
 class WitchScans :
     MangaThemesia(
         "WitchScans",
-        "https://witchscans.com",
+        "https://witchtoons.net",
         "en",
     ) {
     override fun chapterListSelector() = "div.eplister ul li:has(div.chbox):has(div.eph-num):has(a[href])"

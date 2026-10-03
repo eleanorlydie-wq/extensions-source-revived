@@ -7,7 +7,7 @@ import org.jsoup.nodes.Document
 class Onma :
     MMRCMS(
         "مانجا اون لاين",
-        "https://onma.me",
+        "https://onma.top",
         "ar",
         detailsTitleSelector = ".panel-heading",
     ) {

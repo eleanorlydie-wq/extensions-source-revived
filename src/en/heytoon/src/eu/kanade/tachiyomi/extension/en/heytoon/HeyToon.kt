@@ -26,7 +26,7 @@ import java.util.Locale
 
 class HeyToon : HttpSource() {
     override val name = "HeyToon"
-    override val baseUrl = "https://heytoon.net"
+    override val baseUrl = "https://toonhey.com"
     override val lang = "en"
     override val supportsLatest = true
 

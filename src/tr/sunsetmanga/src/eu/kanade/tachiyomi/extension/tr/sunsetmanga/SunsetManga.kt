@@ -7,7 +7,7 @@ import java.util.Locale
 class SunsetManga :
     Madara(
         "Sunset Manga",
-        "https://sunsetmanga.com",
+        "https://sunsetscans.com.tr",
         "tr",
         dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.ROOT),
     ) {

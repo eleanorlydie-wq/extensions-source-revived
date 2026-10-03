@@ -2,8 +2,8 @@ ext {
     extName = 'Hentai-Scantrad'
     extClass = '.HentaiScantrad'
     themePkg = 'madara'
-    baseUrl = 'https://hentai.scantrad-vf.cc'
-    overrideVersionCode = 1
+    baseUrl = 'https://hentai-scantrad.org'
+    overrideVersionCode = 2
     isNsfw = true
 }
 

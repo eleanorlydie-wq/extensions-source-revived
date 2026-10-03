@@ -2,8 +2,8 @@ ext {
     extName = 'Soul Scans'
     extClass = '.SoulScans'
     themePkg = 'mangathemesia'
-    baseUrl = 'https://soulscans.my.id'
-    overrideVersionCode = 2
+    baseUrl = 'https://v1.soulscans.org'
+    overrideVersionCode = 3
     isNsfw = false
 }
 

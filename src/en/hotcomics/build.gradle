@@ -2,7 +2,7 @@ ext {
     extName = 'HotComics'
     extClass = '.HotComics'
     themePkg = 'hotcomics'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = true
 }
 

@@ -296,7 +296,7 @@ class LeerMangaEsp : HttpSource() {
         .takeIf { it.isNotBlank() }
 
     companion object {
-        const val DOMAIN = "leermangaesp.net"
+        const val DOMAIN = "mangalect.org"
         const val PAGE_SIZE = 20
         const val MANGA_PATH_PREFIX = "/manga/"
         val IMAGE_BASE_URL = "https://images.$DOMAIN/file/leermangaesp".toHttpUrl()

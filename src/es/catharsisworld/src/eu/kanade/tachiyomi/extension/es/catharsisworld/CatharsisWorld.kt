@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 class CatharsisWorld :
     Madara(
         "Catharsis World",
-        "https://catharsisworld.dig-it.info",
+        "https://newcatharsis.dig-it.info",
         "es",
         SimpleDateFormat("MMMM dd, yyyy", Locale("es")),
     ),

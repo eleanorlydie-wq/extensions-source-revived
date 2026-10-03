@@ -2,8 +2,8 @@ ext {
     extName = 'Mugiwaras Oficial'
     extClass = '.MugiwarasOficial'
     themePkg = 'madara'
-    baseUrl = 'https://mugiwarasoficial.com'
-    overrideVersionCode = 2
+    baseUrl = 'https://mugiwarasoficial.org'
+    overrideVersionCode = 3
     isNsfw = false
 }
 

@@ -8,7 +8,7 @@ import eu.kanade.tachiyomi.multisrc.zeistmanga.ZeistManga
 class YaoiFanClub :
     ZeistManga(
         "Yaoi Fan Club",
-        "https://www.yaoifanclub.com",
+        "https://yaoifanclub.com",
         "pt-BR",
     ) {
 

@@ -2,8 +2,8 @@ ext {
     extName = 'Astral Scans'
     extClass = '.AstralScans'
     themePkg = 'mangathemesia'
-    baseUrl = 'https://astralscans.top'
-    overrideVersionCode = 7
+    baseUrl = 'https://astralscans.site'
+    overrideVersionCode = 8
     isNsfw = true
 }
 

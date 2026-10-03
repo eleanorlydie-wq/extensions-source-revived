@@ -26,7 +26,7 @@ class EgoToons :
 
     override val name = "Ego Toons"
 
-    override val baseUrl = "https://www.egotoons.com"
+    override val baseUrl = "https://egotoons.com"
 
     override val lang = "pt-BR"
 

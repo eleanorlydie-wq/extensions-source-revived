@@ -2,8 +2,8 @@ ext {
     extName = 'Colorcito Scan'
     extClass = '.ColorcitoScan'
     themePkg = 'spicytheme'
-    baseUrl = 'https://colorcitoscan.com'
-    overrideVersionCode = 1
+    baseUrl = 'https://colorcitotoons.site'
+    overrideVersionCode = 2
     isNsfw = true
 }
 

@@ -5,7 +5,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import org.jsoup.nodes.Document
 import java.util.Locale
 
-class SoulScans : MangaThemesia("Soul Scans", "https://soulscans.my.id", "id") {
+class SoulScans : MangaThemesia("Soul Scans", "https://v1.soulscans.org", "id") {
 
     override val hasProjectPage = true
 
