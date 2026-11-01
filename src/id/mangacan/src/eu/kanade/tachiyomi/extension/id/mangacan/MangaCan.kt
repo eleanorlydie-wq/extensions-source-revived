@@ -29,7 +29,7 @@ class MangaCan :
 
     override val seriesGenreSelector = ".seriestugenre a[href*=genre]"
 
-    override val pageSelector = "div.images img"
+    override val pageSelector = "div.images img, #readerarea ~ center img"
 
     // mangacanblog.com's site redesign left some manga detail pages (e.g. legacy
     // "/baca-komik-*-online-terbaru.html" URLs) with no cover image markup at all under
