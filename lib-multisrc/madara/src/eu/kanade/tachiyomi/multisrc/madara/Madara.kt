@@ -721,7 +721,10 @@ abstract class Madara(
     protected open fun mangaDetailsParse(document: Document): SManga {
         val manga = SManga.create()
         with(document) {
-            manga.title = selectFirst(mangaDetailsSelectorTitle)!!.ownText()
+            // Child themes often move the title out of the stock header.
+            manga.title = selectFirst(mangaDetailsSelectorTitle)?.ownText()?.takeIf(String::isNotBlank)
+                ?: selectFirst("h1")?.text()?.takeIf(String::isNotBlank)
+                ?: selectFirst("meta[property=og:title]")!!.attr("content")
             select(mangaDetailsSelectorAuthor).eachText().filter {
                 it.notUpdating()
             }.joinToString().takeIf { it.isNotBlank() }?.let {
@@ -919,8 +922,9 @@ abstract class Madara(
             }
             // Dates can be part of a "new" graphic or plain text
             // Added "title" alternative
-            chapter.date_upload = selectFirst("img:not(.thumb)")?.attr("alt")?.let { parseRelativeDate(it) }
-                ?: selectFirst("span a")?.attr("title")?.let { parseRelativeDate(it) }
+            // A blank or non-date attribute parses to 0, so fall through to the next candidate.
+            chapter.date_upload = selectFirst("img:not(.thumb)")?.attr("alt")?.let { parseRelativeDate(it) }?.takeIf { it != 0L }
+                ?: selectFirst("span a")?.attr("title")?.let { parseRelativeDate(it) }?.takeIf { it != 0L }
                 ?: parseChapterDate(selectFirst(chapterDateSelector())?.text())
         }
 
@@ -1005,9 +1009,10 @@ abstract class Madara(
         return when {
             RELATIVE_DAY_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.DAY_OF_MONTH, -number) }.timeInMillis
             RELATIVE_HOUR_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.HOUR, -number) }.timeInMillis
+            // Before minutes, since "minggu" (week) contains "min".
+            RELATIVE_WEEK_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.DAY_OF_MONTH, -number * 7) }.timeInMillis
             RELATIVE_MINUTE_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.MINUTE, -number) }.timeInMillis
             RELATIVE_SECOND_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.SECOND, -number) }.timeInMillis
-            RELATIVE_WEEK_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.DAY_OF_MONTH, -number * 7) }.timeInMillis
             RELATIVE_MONTH_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.MONTH, -number) }.timeInMillis
             RELATIVE_YEAR_WORDS.anyWordIn(date) -> cal.apply { add(Calendar.YEAR, -number) }.timeInMillis
             else -> 0
@@ -1023,6 +1028,8 @@ abstract class Madara(
 
     open val pageListParseSelector = "div.page-break, li.blocks-gallery-item, .reading-content .text-left:not(:has(.blocks-gallery-item)) img"
 
+    protected open val pageListFallbackSelector = ".reading-content img.wp-manga-chapter-img"
+
     open val chapterProtectorSelector = "#chapter-protector-data"
     open val chapterProtectorPasswordPrefix = "wpmangaprotectornonce='"
     open val chapterProtectorDataPrefix = "chapter_data='"
@@ -1033,10 +1040,13 @@ abstract class Madara(
         launchIO { countViews(document) }
 
         val chapterProtector = document.selectFirst(chapterProtectorSelector)
-            ?: return document.select(pageListParseSelector).mapIndexed { index, element ->
-                val imageUrl = element.selectFirst("img")?.let { imageFromElement(it) }
-                Page(index, document.location(), imageUrl)
-            }
+            ?: return document.select(pageListParseSelector)
+                // Some sites dropped the page-break wrapper around the reader images.
+                .ifEmpty { document.select(pageListFallbackSelector) }
+                .mapIndexed { index, element ->
+                    val imageUrl = element.selectFirst("img")?.let { imageFromElement(it) }
+                    Page(index, document.location(), imageUrl)
+                }
         val chapterProtectorHtml = chapterProtector.attr("src")
             .takeIf { it.startsWith("data:text/javascript;base64,") }
             ?.substringAfter("data:text/javascript;base64,")
@@ -1184,16 +1194,16 @@ abstract class Madara(
         private val YESTERDAY_WORDS = WordSet("yesterday", "يوم واحد")
         private val TODAY_WORDS = WordSet("today")
         private val DAY_BEFORE_YESTERDAY_WORDS = WordSet("يومين")
-        private val AGO_WORDS = WordSet("ago", "atrás", "önce", "قبل", "trước")
+        private val AGO_WORDS = WordSet("ago", "atrás", "önce", "قبل", "trước", "lalu")
         private val RELATIVE_DATE_PREFIX_WORDS = WordSet("hace", "năm", "tháng", "tuần", "ngày", "giờ", "phút", "giây")
 
         private val RELATIVE_DAY_WORDS = WordSet("hari", "gün", "jour", "día", "dia", "day", "วัน", "ngày", "giorni", "أيام", "天")
         private val RELATIVE_HOUR_WORDS = WordSet("jam", "saat", "heure", "hora", "hour", "ชั่วโมง", "giờ", "ore", "ساعة", "小时")
         private val RELATIVE_MINUTE_WORDS = WordSet("menit", "dakika", "min", "minute", "minuto", "นาที", "دقائق", "phút")
         private val RELATIVE_SECOND_WORDS = WordSet("detik", "segundo", "second", "วินาที", "giây")
-        private val RELATIVE_WEEK_WORDS = WordSet("week", "semana", "tuần")
-        private val RELATIVE_MONTH_WORDS = WordSet("month", "mes", "tháng")
-        private val RELATIVE_YEAR_WORDS = WordSet("year", "año", "năm")
+        private val RELATIVE_WEEK_WORDS = WordSet("week", "semana", "tuần", "minggu")
+        private val RELATIVE_MONTH_WORDS = WordSet("month", "mes", "tháng", "bulan")
+        private val RELATIVE_YEAR_WORDS = WordSet("year", "año", "năm", "tahun")
     }
 }
 
