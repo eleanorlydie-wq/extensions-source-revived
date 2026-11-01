@@ -3,7 +3,7 @@ ext {
     extClass = '.Mangalek'
     themePkg = 'madara'
     baseUrl = 'https://mangalik.net'
-    overrideVersionCode = 10
+    overrideVersionCode = 11
     isNsfw = false
 }
 
