@@ -10,7 +10,7 @@ import org.jsoup.nodes.Element
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class ReadOnePunchManMangaOnlineTwo : MangaCatalog("Read One-Punch Man Manga Online", "https://ww6.readopm.com", "en") {
+class ReadOnePunchManMangaOnlineTwo : MangaCatalog("Read One-Punch Man Manga Online", "https://ww7.readopm.com", "en") {
     override val sourceList = listOf(
         Pair("One Punch Man", "$baseUrl/manga/one-punch-man/"),
         Pair("Official", "$baseUrl/manga/one-punch-man-official/"),

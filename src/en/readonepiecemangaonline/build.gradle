@@ -2,8 +2,8 @@ ext {
     extName = 'Read One Piece Manga Online'
     extClass = '.ReadOnePieceMangaOnline'
     themePkg = 'mangacatalog'
-    baseUrl = 'https://ww12.readonepiece.com'
-    overrideVersionCode = 1
+    baseUrl = 'https://ww13.readonepiece.com'
+    overrideVersionCode = 2
     isNsfw = false
 }
 

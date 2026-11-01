@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.extension.en.readsololevelingmangamanhwaonline
 
 import eu.kanade.tachiyomi.multisrc.mangacatalog.MangaCatalog
 
-class ReadSoloLevelingMangaManhwaOnline : MangaCatalog("Read Solo Leveling Manga Manhwa Online", "https://ww3.readsololeveling.org", "en") {
+class ReadSoloLevelingMangaManhwaOnline : MangaCatalog("Read Solo Leveling Manga Manhwa Online", "https://ww4.readsololeveling.org", "en") {
     override val sourceList = listOf(
         Pair("Solo Leveling Manhwa", "$baseUrl/manga/solo-leveling/"),
         Pair("Solo Leveling Light Novel", "$baseUrl/manga/solo-leveling-light-novel/"),

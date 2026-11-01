@@ -2,8 +2,8 @@ ext {
     extName = 'Read Kingdom Manga Online'
     extClass = '.ReadKingdomMangaOnline'
     themePkg = 'mangacatalog'
-    baseUrl = 'https://ww5.readkingdom.com'
-    overrideVersionCode = 1
+    baseUrl = 'https://ww6.readkingdom.com'
+    overrideVersionCode = 2
     isNsfw = false
 }
 

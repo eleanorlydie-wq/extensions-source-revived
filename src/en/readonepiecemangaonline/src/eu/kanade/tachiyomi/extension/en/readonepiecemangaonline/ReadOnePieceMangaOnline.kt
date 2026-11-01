@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.extension.en.readonepiecemangaonline
 
 import eu.kanade.tachiyomi.multisrc.mangacatalog.MangaCatalog
 
-class ReadOnePieceMangaOnline : MangaCatalog("Read One Piece Manga Online", "https://ww12.readonepiece.com", "en") {
+class ReadOnePieceMangaOnline : MangaCatalog("Read One Piece Manga Online", "https://ww13.readonepiece.com", "en") {
     override val sourceList = listOf(
         Pair("One Piece", "$baseUrl/manga/one-piece/"),
         Pair("Colored", "$baseUrl/manga/one-piece-digital-colored-comics/"),
