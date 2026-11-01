@@ -3,7 +3,7 @@ ext {
     extClass = '.InmortalScan'
     themePkg = 'madara'
     baseUrl = 'https://scan-inmortal.com'
-    overrideVersionCode = 4
+    overrideVersionCode = 5
     isNsfw = false
 }
 
