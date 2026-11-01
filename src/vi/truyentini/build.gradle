@@ -1,0 +1,10 @@
+ext {
+    extName = 'TruyenTini'
+    extClass = '.TruyenTini'
+    themePkg = 'madara'
+    baseUrl = 'https://truyentini.net'
+    overrideVersionCode = 0
+    isNsfw = true
+}
+
+apply plugin: "kei.plugins.extension.legacy"
