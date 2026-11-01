@@ -13,7 +13,11 @@ import eu.kanade.tachiyomi.multisrc.galleryadults.toBinary
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.source.model.SChapter
 import keiyoushi.utils.firstInstanceOrNull
+import keiyoushi.utils.parseAs
+import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.jsoup.nodes.Document
@@ -31,8 +35,22 @@ class HentaiZap(
     override val supportsLatest = true
     override val supportSpeechless: Boolean = true
 
-    override fun Element.mangaLang() = select("a:has(.th_lg)").attr("href")
-        .removeSuffix("/").substringAfterLast("/")
+    override fun popularMangaSelector() = "article.hz-gallery-card"
+
+    override fun popularMangaNextPageSelector() = "a[rel=next]"
+
+    override fun Element.mangaUrl() = selectFirst(".hz-gallery-card__cover")?.attr("abs:href")
+
+    override fun Element.mangaThumbnail() = selectFirst(".hz-gallery-card__media img")?.imgAttr()
+
+    override fun Element.mangaTitle(selector: String): String? = mangaFullTitle(selector.takeIf { it != ".caption" } ?: ".hz-gallery-card__title").let {
+        if (preferences.shortTitle) it?.shortenTitle() else it
+    }
+
+    override fun Element.mangaLang() = selectFirst(".hz-gallery-card__flag")?.attr("href")
+        .orEmpty()
+        .removeSuffix("/")
+        .substringAfterLast("/")
         .let {
             // Include Speechless in search results
             if (it == LANGUAGE_SPEECHLESS) mangaLang else it
@@ -109,33 +127,47 @@ class HentaiZap(
     override val favoritePath = "inc/user.php?act=favs"
 
     /* Details */
-    override val mangaDetailInfoSelector = ".gp_top"
+    override val mangaDetailInfoSelector = ".hz-gallery-overview"
 
-    override fun Element.getCover() = selectFirst(".gp_cover img")?.imgAttr()
+    override fun Element.getCover() = selectFirst(".hz-gallery-cover img")?.imgAttr()
 
-    override fun Element.getInfo(tag: String): String = select(".info_txt:contains($tag:) ~ li a.gp_btn_tag")
+    override fun Element.getInfo(tag: String): String = select(".hz-gallery-entity-group:has(.hz-gallery-entity-label:contains($tag)) .hz-gallery-tag")
         .joinToString {
-            val name = it.ownText()
+            val name = it.selectFirst(".hz-gallery-tag__name")?.text().orEmpty()
             if (tag.contains(regexTag)) {
                 genres[name] = it.attr("href")
                     .removeSuffix("/").substringAfterLast('/')
             }
-            listOf(
-                name,
-                it.select(".split_tag").text()
-                    .removePrefix("| ")
-                    .trim(),
-            )
-                .filter { s -> s.isNotBlank() }
-                .joinToString()
+            name
         }
 
-    override val thumbnailSelector = ".gp_th"
+    override fun Element.getInfoPages(document: Document?): String? = document?.selectFirst(".hz-gallery-thumbs")
+        ?.attr("data-total-pages")
+        ?.takeIf { it.isNotBlank() }
+        ?.let { "Pages: $it" }
 
-    override fun tagsParser(document: Document): List<Genre> = document.select("a.btn:has(.list_tag)")
-        .mapNotNull {
+    /* Pages */
+    override fun pageListRequest(chapter: SChapter): Request {
+        val galleryId = chapter.url.trimEnd('/').substringAfterLast('/')
+        return GET("$baseUrl/$pageUri/$galleryId/1/", headers)
+    }
+
+    // The reader embeds the whole page list next to the first image, no need to open each page.
+    override fun pageListParse(document: Document): List<Page> {
+        val pages = document.selectFirst("script#readerPagesJson")?.data()
+            ?: throw Exception("Failed to load page list")
+        val imagesUri = document.selectFirst("img#readerImg")?.imgAttr()?.substringBeforeLast('/')
+            ?: throw Exception("Failed to load page list")
+
+        return pages.parseAs<List<ReaderPage>>().map {
+            Page(it.page - 1, imageUrl = "$imagesUri/${it.page}.${it.ext}")
+        }
+    }
+
+    override fun tagsParser(document: Document): List<Genre> = document.select("article.hz-taxonomy-card .hz-taxonomy-card__title a")
+        .map {
             Genre(
-                it.select(".list_tag").text(),
+                it.text(),
                 it.attr("href")
                     .removeSuffix("/").substringAfterLast('/'),
             )
@@ -173,5 +205,8 @@ class HentaiZap(
         Pair("Top Rated", "tr"),
     )
 
-    override fun relatedMangaSelector() = ".rl_th ${popularMangaSelector()}"
+    override fun relatedMangaSelector() = ".hz-gallery-related ${popularMangaSelector()}"
+
+    @Serializable
+    private class ReaderPage(val page: Int, val ext: String)
 }
