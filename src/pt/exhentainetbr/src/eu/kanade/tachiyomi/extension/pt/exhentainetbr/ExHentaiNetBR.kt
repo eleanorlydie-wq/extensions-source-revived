@@ -107,31 +107,25 @@ class ExHentaiNetBR : HttpSource() {
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
         return SManga.create().apply {
-            title = document.selectFirst(".stats_box h3")!!.text()
-            description = document.selectFirst(".sinopse_manga .info_p:last-child")?.text()
-            thumbnail_url = document.selectFirst(".anime_cover img")?.imgAttr()
-            artist = document.selectFirst(".sinopse_manga h5:contains(Artista) + span")?.text()
-            author = artist
-            genre = document.select(".tag-btn").joinToString { it.ownText() }
-            val statusLabel = document.selectFirst(".stats_box span")?.ownText() ?: ""
-            status = when {
-                statusLabel.equals("Completo", ignoreCase = true) -> SManga.COMPLETED
-                else -> SManga.UNKNOWN
-            }
+            title = document.selectFirst(".ex-manga-titles h1")!!.text()
+            description = document.selectFirst(".ex-manga-synopsis .gerens-content")?.text()
+            thumbnail_url = document.selectFirst(".ex-manga-cover-box img")?.imgAttr()
+            genre = document.select("a.ex-badge-tag").joinToString { it.text() }
+            status = SManga.UNKNOWN
             setUrlWithoutDomain(document.location())
         }
     }
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
-        return document.select(".chapter_content a").map { element ->
+        return document.select("a.ex-chapter-row").map { element ->
             SChapter.create().apply {
-                name = element.selectFirst(".name_chapter")!!.text()
-                val dateStr = element.selectFirst("span.release-date")?.ownText()?.substringAfter(":")?.trim()
-                date_upload = dateFormat.tryParse(dateStr)
+                name = element.selectFirst(".ex-ch-left")!!.text()
+                date_upload = dateFormat.tryParse(element.selectFirst(".ex-ch-date")?.text())
+                chapter_number = element.attr("data-chapter-number").toFloatOrNull() ?: -1f
                 setUrlWithoutDomain(element.absUrl("href"))
             }
-        }.reversed()
+        }.sortedByDescending { it.chapter_number }
     }
 
     override fun pageListParse(response: Response): List<Page> {
