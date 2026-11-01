@@ -318,6 +318,5 @@ class Atsumaru :
         private val PREF_SHOW_18 = "pref_18_mode"
 
         private val PROTOCOL_REGEX = Regex("^https?:?//")
-
     }
 }
