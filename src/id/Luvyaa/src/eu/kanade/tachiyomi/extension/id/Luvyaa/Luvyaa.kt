@@ -17,7 +17,7 @@ import java.util.Locale
 class Luvyaa :
     MangaThemesia(
         "Luvyaa",
-        "https://v4.luvyaa.co",
+        "https://v5.luvyaa.co",
         "id",
         dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.US),
     ),
