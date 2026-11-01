@@ -53,7 +53,7 @@ class Atsumaru :
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<BrowseMangaDto>().items
 
-        return MangasPage(data.map { it.toSManga(baseUrl) }, true)
+        return MangasPage(data.map { it.toSManga(baseUrl) }, data.size == BROWSE_LIMIT)
     }
 
     // =============================== Latest ===============================
@@ -83,6 +83,7 @@ class Atsumaru :
 
             val filterBy = mutableListOf<String>()
             filterBy.add("hidden:!=true")
+            filterBy.add("title:!=`DELETE`") // placeholders left by site moderators
 
             val includedGenres = mutableListOf<String>()
             val excludedGenres = mutableListOf<String>()
@@ -218,15 +219,9 @@ class Atsumaru :
     }
 
     override fun searchMangaParse(response: Response): MangasPage {
-        val body = response.body.string()
+        val data = response.parseAs<SearchResultsDto>()
 
-        return if (body.contains("\"hits\"")) {
-            val data = body.parseAs<SearchResultsDto>()
-            MangasPage(data.hits.map { it.document.toSManga(baseUrl) }, data.hasNextPage())
-        } else {
-            val data = body.parseAs<BrowseMangaDto>()
-            MangasPage(data.items.map { it.toSManga(baseUrl) }, true)
-        }
+        return MangasPage(data.hits.map { it.document.toSManga(baseUrl) }, data.hasNextPage())
     }
 
     // =========================== Manga Details ============================
@@ -288,7 +283,8 @@ class Atsumaru :
         val imageUrl = when {
             page.image.startsWith("http") -> page.image
             page.image.startsWith("//") -> "https:${page.image}"
-            else -> "$baseUrl/static/${page.image.removePrefix("/").removePrefix("static/")}"
+            // Page images are only served from the CDN; atsu.moe/static/pages answers 410.
+            else -> "https://cdn.atsu.moe/static/${page.image.removePrefix("/").removePrefix("static/")}"
         }
         Page(index, imageUrl = imageUrl.replaceFirst(PROTOCOL_REGEX, "https://"))
     }
@@ -322,5 +318,6 @@ class Atsumaru :
         private val PREF_SHOW_18 = "pref_18_mode"
 
         private val PROTOCOL_REGEX = Regex("^https?:?//")
+
     }
 }
