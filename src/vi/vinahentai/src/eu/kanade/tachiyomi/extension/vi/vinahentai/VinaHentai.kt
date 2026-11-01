@@ -33,7 +33,7 @@ class VinaHentai :
     override val name = "VinaHentai"
     override val lang = "vi"
 
-    private val defaultBaseUrl = "https://vinahentai.club"
+    private val defaultBaseUrl = "https://vinahentai.beer"
 
     override val baseUrl get() = getPrefBaseUrl()
 
@@ -271,7 +271,7 @@ class VinaHentai :
 
     private val imageUrlRegex by lazy {
         val baseDomain = baseUrl.removePrefix("https://").removePrefix("http://")
-        Regex("""https://cdn\.${Regex.escape(baseDomain)}/manga-images/[^"'\s\\]+""")
+        Regex("""https://[^/"'\s]*${Regex.escape(baseDomain)}/manga-images/[^"'\s\\]+""")
     }
 
     override fun pageListParse(response: Response): List<Page> {
