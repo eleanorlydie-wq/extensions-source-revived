@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.extension.en.readblackclovermangaonline
 
 import eu.kanade.tachiyomi.multisrc.mangacatalog.MangaCatalog
 
-class ReadBlackCloverMangaOnline : MangaCatalog("Read Black Clover Manga Online", "https://ww10.readblackclover.com", "en") {
+class ReadBlackCloverMangaOnline : MangaCatalog("Read Black Clover Manga Online", "https://readblackclover.com", "en") {
     override val sourceList = listOf(
         Pair("Black Clover", "$baseUrl/manga/black-clover/"),
         Pair("Fan Colored", "$baseUrl/manga/black-clover-colored/"),
