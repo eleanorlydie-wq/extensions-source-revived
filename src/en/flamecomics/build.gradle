@@ -1,0 +1,8 @@
+ext {
+    extName = 'Flame Comics'
+    extClass = '.FlameComics'
+    extVersionCode = 51
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
