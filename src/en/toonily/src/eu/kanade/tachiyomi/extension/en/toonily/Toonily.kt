@@ -3,11 +3,13 @@ package eu.kanade.tachiyomi.extension.en.toonily
 import eu.kanade.tachiyomi.multisrc.madara.Madara
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SManga
 import keiyoushi.lib.cookieinterceptor.CookieInterceptor
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
+import org.jsoup.nodes.Document
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -38,6 +40,10 @@ class Toonily :
         query.replace(titleSpecialCharactersRegex, " ").trim(),
         filters,
     )
+
+    override fun pageListParse(document: Document): List<Page> = super.pageListParse(document)
+        .filterNot { it.imageUrl?.endsWith(PROMO_IMAGE) == true } // Discord banner the site appends to every chapter
+        .mapIndexed { index, page -> Page(index, page.url, page.imageUrl) }
 
     override fun genresRequest(): Request = GET("$baseUrl/search/?post_type=wp-manga", headers)
 
@@ -87,7 +93,8 @@ class Toonily :
     }
 
     companion object {
-        val titleSpecialCharactersRegex = "[^a-z0-9]+".toRegex()
+        val titleSpecialCharactersRegex = "[^\\p{L}\\p{N}]+".toRegex()
+        private const val PROMO_IMAGE = "/wp-content/assets/999.png"
         val sdCoverRegex = Regex("""-[0-9]+x[0-9]+(\.\w+)$""")
     }
 }
