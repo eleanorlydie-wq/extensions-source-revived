@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.extension.en.lusttoon
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.serialization.SerialName
+import keiyoushi.utils.parseAs
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -90,4 +91,12 @@ class ChapterDto(
     companion object {
         private val digitRegex = Regex("""\d""")
     }
+}
+
+@Serializable
+class PagechesDto(
+    private val urlImg: String? = null,
+) {
+    val images: List<String>
+        get() = runCatching { urlImg?.parseAs<List<String>>() }.getOrNull() ?: emptyList()
 }
