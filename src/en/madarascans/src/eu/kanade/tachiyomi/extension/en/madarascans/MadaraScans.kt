@@ -17,7 +17,7 @@ import kotlin.getValue
 class MadaraScans :
     MangaThemesia(
         "Madara Scans",
-        "https://madarascans.com",
+        "https://madarascans.net",
         "en",
         mangaUrlDirectory = "/series",
         dateFormat = SimpleDateFormat("yyyy/MM/dd", Locale.US),

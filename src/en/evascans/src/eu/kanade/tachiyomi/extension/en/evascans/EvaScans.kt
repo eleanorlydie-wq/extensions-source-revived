@@ -9,7 +9,7 @@ import java.util.Locale
 class EvaScans :
     MangaThemesia(
         "Eva Scans",
-        "https://evascans.org",
+        "https://evascans.net",
         "en",
         "/series",
         SimpleDateFormat("yyyy/MM/dd", Locale.ROOT),

@@ -2,8 +2,8 @@ ext {
     extName = 'Luna Toons'
     extClass = '.LunaToons'
     themePkg = 'keyoapp'
-    baseUrl = 'https://lunatoons.org'
-    overrideVersionCode = 0
+    baseUrl = 'https://lunatoons.net'
+    overrideVersionCode = 1
     isNsfw = true
 }
 
