@@ -21,7 +21,7 @@ class Bbato : HttpSource() {
 
     override val name = "Bbato"
 
-    override val baseUrl = "https://bbato.com"
+    override val baseUrl = "https://bato1.com"
 
     override val lang = "en"
 

@@ -2,8 +2,8 @@ ext {
     extName = 'Madara Scans'
     extClass = '.MadaraScans'
     themePkg = 'mangathemesia'
-    baseUrl = 'https://madarascans.com'
-    overrideVersionCode = 2
+    baseUrl = 'https://madarascans.net'
+    overrideVersionCode = 3
     isNsfw = false
 }
 

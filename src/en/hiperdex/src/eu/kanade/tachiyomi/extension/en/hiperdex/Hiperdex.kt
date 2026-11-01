@@ -22,7 +22,7 @@ import java.util.Locale
 class Hiperdex :
     Madara(
         "Hiperdex",
-        "https://hiperdex.com",
+        "https://hiperdex.tv",
         "en",
         dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.US),
     ),

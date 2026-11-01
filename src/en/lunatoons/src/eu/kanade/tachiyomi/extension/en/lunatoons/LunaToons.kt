@@ -7,7 +7,7 @@ import org.jsoup.nodes.Document
 class LunaToons :
     Keyoapp(
         "Luna Toons",
-        "https://lunatoons.org",
+        "https://lunatoons.net",
         "en",
     ) {
     override fun mangaDetailsParse(document: Document): SManga = super.mangaDetailsParse(document).apply {
