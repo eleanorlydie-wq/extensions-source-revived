@@ -28,7 +28,7 @@ class Toonkor :
 
     override val name = "Toonkor"
 
-    private val defaultBaseUrl = "https://tkor119.com"
+    private val defaultBaseUrl = "https://toonkor0.org"
 
     private val baseUrlPref = "overrideBaseUrl_v${AppInfo.getVersionName()}"
 
@@ -43,6 +43,7 @@ class Toonkor :
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
+    private val toonImgRegex = Regex("""toon_img\s*=\s*'([^']+)'""")
     private val pageListRegex = Regex("""src="([^"]*)"""")
 
     private val preferences: SharedPreferences by getPreferencesLazy()
@@ -125,8 +126,10 @@ class Toonkor :
 
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
-        val encoded = document.select("script:containsData(toon_img)").firstOrNull()?.data()
-            ?.substringAfter("'")?.substringBefore("'") ?: throw Exception("toon_img script not found")
+        // Several scripts mention toon_img; only the one assigning the base64 blob is useful.
+        val encoded = document.select("script")
+            .firstNotNullOfOrNull { toonImgRegex.find(it.data())?.groupValues?.get(1) }
+            ?: throw Exception("toon_img script not found")
 
         val decoded = Base64.decode(encoded, Base64.DEFAULT).toString(Charset.defaultCharset())
 
