@@ -1,0 +1,10 @@
+ext {
+    extName = 'Akaza Scans'
+    extClass = '.AkazaScans'
+    themePkg = 'mangathemesia'
+    baseUrl = 'https://akazascans.org'
+    overrideVersionCode = 0
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
