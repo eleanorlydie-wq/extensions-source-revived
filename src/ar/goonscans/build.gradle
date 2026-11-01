@@ -3,7 +3,7 @@ ext {
     extClass = '.GoonScans'
     themePkg = 'mangathemesia'
     baseUrl = 'https://goonscans.org'
-    overrideVersionCode = 0
+    overrideVersionCode = 1
     isNsfw = true
 }
 
