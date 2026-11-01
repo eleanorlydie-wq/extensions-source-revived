@@ -77,18 +77,13 @@ class Comick(
 
     override fun popularMangaRequest(page: Int): Request {
         val url = "$baseUrl/api/comics/top".toHttpUrl().newBuilder().apply {
-            val days = when (page) {
-                1, 4 -> 7
-                2, 5 -> 30
-                3, 6 -> 90
-                else -> throw UnsupportedOperationException()
-            }
+            // The endpoint has no paging and ignores its "days" parameter, so each list is one page.
             val type = when (page) {
-                1, 2, 3 -> "follow"
-                4, 5, 6 -> "most_follow_new"
+                1 -> "follow"
+                2 -> "most_follow_new"
                 else -> throw UnsupportedOperationException()
             }
-            addQueryParameter("days", days.toString())
+            addQueryParameter("days", "7")
             addQueryParameter("type", type)
             fragment(page.toString())
         }.build()
@@ -102,18 +97,33 @@ class Comick(
 
         return MangasPage(
             mangas = data.data.map(BrowseComic::toSManga),
-            hasNextPage = page < 6,
+            hasNextPage = page < 2,
         )
     }
 
-    override fun latestUpdatesRequest(page: Int) = GET("$baseUrl/api/chapters/latest?order=new&page=$page", headers)
+    private var latestCursor: String? = null
+
+    // Paged by cursor only; the API ignores a page parameter and repeats the first page.
+    override fun latestUpdatesRequest(page: Int): Request {
+        if (page == 1) {
+            latestCursor = null
+        }
+        val url = "$baseUrl/api/chapters/latest".toHttpUrl().newBuilder()
+            .addQueryParameter("order", "new")
+            .apply { latestCursor?.let { addQueryParameter("cursor", it) } }
+            .build()
+
+        return GET(url, headers)
+    }
 
     override fun latestUpdatesParse(response: Response): MangasPage {
-        val data = response.parseAs<Data<List<BrowseComic>>>()
+        val data = response.parseAs<SearchResponse>()
+        latestCursor = data.cursor
 
         return MangasPage(
-            mangas = data.data.map(BrowseComic::toSManga),
-            hasNextPage = data.data.size == 100,
+            // One row per new chapter, so a title with several recent chapters repeats.
+            mangas = data.data.map(BrowseComic::toSManga).distinctBy { it.url },
+            hasNextPage = data.cursor != null,
         )
     }
 
