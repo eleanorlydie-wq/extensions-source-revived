@@ -70,6 +70,8 @@ jobs:
     timeout-minutes: 30
     if: ${{ toJson(fromJson(needs.prepare.outputs.matrix).chunk) != '[]' }}
     strategy:
+      # A failed chunk must not cancel the others; publish ships what did build.
+      fail-fast: false
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout main branch
@@ -117,7 +119,9 @@ jobs:
   publish:
     name: Publish extension repo
     needs: [prepare, build]
-    if: "github.repository == 'eleanorlydie-wq/extensions-source-revived'"
+    # Publish when at least the build ran, even with a failed chunk. The run stays red, so
+    # nx-set-shas keeps the last green commit and the next push rebuilds what failed.
+    if: "!cancelled() && github.repository == 'eleanorlydie-wq/extensions-source-revived' && needs.prepare.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'failure')"
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -163,6 +167,19 @@ jobs:
         env:
           DELETE: ${{ needs.prepare.outputs.delete }}
         run: |
+          # merge-repo.py drops every listed module from the published repo before adding the
+          # new builds. Keep the published copy of a module whose chunk failed: only list it
+          # when it has a new APK or its source was really deleted.
+          DELETE="$(python - <<'EOF'
+          import json, os, sys
+          from pathlib import Path
+          built = {p.name.split("-v")[0].removeprefix("tachiyomi-") for p in Path("main/repo/apk").glob("*.apk")}
+          modules = json.loads(os.environ["DELETE"])
+          kept = [m for m in modules if m in built or not Path("main/src", *m.split(".", 1)).is_dir()]
+          print("Keeping published copy of unbuilt modules:", sorted(set(modules) - set(kept)), file=sys.stderr)
+          print(json.dumps(kept))
+          EOF
+          )"
           cd repo
           # index_pb2.py is generated for protobuf 7.35.0; ValidateProtobufRuntimeVersion
           # requires a same-major runtime >= that. Cap below 8 to avoid a major break.
