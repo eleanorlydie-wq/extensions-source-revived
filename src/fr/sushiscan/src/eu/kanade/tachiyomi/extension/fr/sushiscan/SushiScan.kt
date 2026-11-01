@@ -61,12 +61,20 @@ class SushiScan :
     override fun latestUpdatesRequest(page: Int) = GET("$baseUrl/catalogue/?page=$page&order=update", headers)
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
+        if (query.isBlank()) return super.searchMangaRequest(page, query, filters)
+
+        // The catalogue has no title field, so text search can't be combined with the filters.
         val url = "$baseUrl/page/$page".toHttpUrl().newBuilder()
             .addQueryParameter("s", query)
             .build()
 
         return GET(url, headers)
     }
+
+    // The catalogue has no author or year field.
+    override fun getFilterList() = FilterList(
+        super.getFilterList().filterNot { it is AuthorFilter || it is YearFilter },
+    )
 
     override fun mangaDetailsParse(document: Document): SManga = super.mangaDetailsParse(document).apply {
         status = document.select(seriesStatusSelector).text().parseStatus()
