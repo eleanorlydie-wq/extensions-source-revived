@@ -112,15 +112,17 @@ class MH1234 : HttpSource() {
     override fun mangaDetailsParse(response: Response): SManga {
         val document = response.asJsoup()
         return SManga.create().apply {
-            val meta = document.select(".comic-hero__meta .meta-item")
-            author = meta.getOrNull(0)?.text()
-            genre = meta.getOrNull(1)?.text()
-            status = when (document.selectFirst(".stat-item:contains(状态) .stat-value")?.text()) {
+            val info = document.select(".mint-work-info > p")
+            title = document.selectFirst("#mintWorkTitle")!!.text()
+            author = info.getOrNull(0)?.text()?.removeSuffix("著")?.trim()
+            genre = info.getOrNull(1)?.ownText()?.split(" ")?.filter(String::isNotBlank)?.joinToString()
+            status = when (document.selectFirst(".mint-work-info .mint-tag")?.text()) {
                 "连载" -> SManga.ONGOING
                 "完结" -> SManga.COMPLETED
                 else -> SManga.UNKNOWN
             }
-            description = document.selectFirst("#comicDesc")?.text()?.removePrefix("介绍:")?.trim()
+            description = document.selectFirst(".mint-intro > div")?.text()
+            thumbnail_url = document.selectFirst("img.mint-work-cover")?.absUrl("src")
         }
     }
 
@@ -128,18 +130,23 @@ class MH1234 : HttpSource() {
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
-        return document.select(".chapter-list a.chapter-item").map { element ->
+        return document.select("[data-mint-chapters] a[data-chapter-id]").map { element ->
             SChapter.create().apply {
                 setUrlWithoutDomain(element.absUrl("href"))
-                name = element.selectFirst(".chapter-title")!!.text()
+                name = element.text()
             }
-        }.reversed()
+        }
     }
 
     // Manga View Page
 
     override fun pageListParse(response: Response): List<Page> {
-        val document = response.asJsoup()
+        var document = response.asJsoup()
+        // Chapters go through an interstitial that redirects to a separate reader host by script.
+        document.selectFirst("script:containsData(location.replace)")?.data()
+            ?.let { READER_REDIRECT_REGEX.find(it)?.groupValues?.get(1) }
+            ?.let { document = client.newCall(GET(it, headers)).execute().asJsoup() }
+
         return document.select("img.reader-image").mapIndexed { i, img ->
             Page(i, imageUrl = img.absUrl("data-src"))
         }
@@ -166,6 +173,7 @@ class MH1234 : HttpSource() {
 
     companion object {
         private const val MANGA_LIST_SELECTOR = ".comic-card"
+        private val READER_REDIRECT_REGEX = Regex("""location\.replace\("([^"]+)"\)""")
         private const val NEXT_PAGE_SELECTOR = ".pagination-wrapper a:contains(下一页), .pagination-wrapper a:contains(>)"
     }
 }
