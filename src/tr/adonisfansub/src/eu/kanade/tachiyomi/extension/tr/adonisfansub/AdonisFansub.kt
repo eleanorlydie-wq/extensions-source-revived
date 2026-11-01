@@ -1,10 +1,13 @@
 package eu.kanade.tachiyomi.extension.tr.adonisfansub
 
-import eu.kanade.tachiyomi.multisrc.madara.Madara
-import eu.kanade.tachiyomi.network.GET
-import okhttp3.Request
+import eu.kanade.tachiyomi.multisrc.mangathemesia.MangaThemesia
+import java.text.SimpleDateFormat
+import java.util.Locale
 
-class AdonisFansub : Madara("Adonis Fansub", "https://manga.adonisfansub.com", "tr") {
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/manga/page/$page/?m_orderby=views", headers)
-    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/manga/page/$page/?m_orderby=latest", headers)
-}
+class AdonisFansub :
+    MangaThemesia(
+        "Adonis Fansub",
+        "https://manga.adonisfansub.com",
+        "tr",
+        dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale("tr")),
+    )
