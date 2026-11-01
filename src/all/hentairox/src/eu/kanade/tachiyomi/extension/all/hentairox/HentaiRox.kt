@@ -10,7 +10,11 @@ import eu.kanade.tachiyomi.multisrc.galleryadults.SpeechlessFilter
 import eu.kanade.tachiyomi.multisrc.galleryadults.imgAttr
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.source.model.SChapter
 import keiyoushi.utils.firstInstanceOrNull
+import keiyoushi.utils.parseAs
+import kotlinx.serialization.Serializable
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import org.jsoup.nodes.Document
@@ -29,27 +33,49 @@ class HentaiRox(
 
     override val basicSearchKey = "key"
 
-    override fun Element.mangaLang() = select("a:has(.thumb_flag)").attr("href")
-        .removeSuffix("/").substringAfterLast("/")
+    override fun popularMangaSelector() = "article.hr-gallery-card"
+
+    override fun popularMangaNextPageSelector() = ".hr-pagination__item.is-active + .hr-pagination__item a"
+
+    override fun Element.mangaUrl() = selectFirst(".hr-gallery-card__cover")?.attr("abs:href")
+
+    override fun Element.mangaThumbnail() = selectFirst(".hr-gallery-card__media img")?.imgAttr()
+
+    override fun Element.mangaLang() = selectFirst(".hr-gallery-card__flag")?.attr("href")
+        .orEmpty()
+        .removeSuffix("/")
+        .substringAfterLast("/")
         .let {
             // Include Speechless in search results
             if (it == LANGUAGE_SPEECHLESS) mangaLang else it
         }
 
-    override fun Element.mangaTitle(selector: String): String? = mangaFullTitle(selector.takeIf { it != ".caption" } ?: ".gallery_title").let {
+    override fun Element.mangaTitle(selector: String): String? = mangaFullTitle(selector.takeIf { it != ".caption" } ?: ".hr-gallery-card__title").let {
         if (preferences.shortTitle) it?.shortenTitle() else it
     }
 
+    // The site has no language-independent popular listing, the search page covers it.
     override fun popularMangaRequest(page: Int): Request = if (mangaLang.isBlank()) {
-        // Popular browsing for LANGUAGE_MULTI
         val url = baseUrl.toHttpUrl().newBuilder().apply {
-            addPathSegments("top-rated")
-            addPageUri(page)
+            addPathSegment("search")
+            addPathSegment("")
+            addQueryParameter("sort", "popular")
+            addQueryParameter("page", page.toString())
         }
         GET(url.build(), headers)
     } else {
-        // Popular browsing for other languages: using source's popular page
         super.popularMangaRequest(page)
+    }
+
+    override fun latestUpdatesRequest(page: Int): Request = if (mangaLang.isBlank()) {
+        val url = baseUrl.toHttpUrl().newBuilder().apply {
+            addPathSegment("search")
+            addPathSegment("")
+            addQueryParameter("page", page.toString())
+        }
+        GET(url.build(), headers)
+    } else {
+        super.latestUpdatesRequest(page)
     }
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
@@ -78,8 +104,6 @@ class HentaiRox(
                 intermediateSearchRequest(page, query, filters)
             useBasicSearch && (selectedGenres.size > 1 || query.isNotBlank()) ->
                 basicSearchRequest(page, query, filters)
-            sortOrderFilter?.state == 2 ->
-                topRatedRequest(page)
             sortOrderFilter?.state == 1 ->
                 latestUpdatesRequest(page)
             else ->
@@ -87,18 +111,9 @@ class HentaiRox(
         }
     }
 
-    private fun topRatedRequest(page: Int): Request {
-        val url = baseUrl.toHttpUrl().newBuilder().apply {
-            addPathSegments("top-rated")
-            addPageUri(page)
-        }
-        return GET(url.build(), headers)
-    }
-
     override fun getSortOrderURIs() = listOf(
         Pair("Popular", "pp"),
         Pair("Latest", "lt"),
-        Pair("Top Rated", "tr"),
     )
 
     /**
@@ -116,38 +131,55 @@ class HentaiRox(
     }
 
     /* Details */
-    override fun Element.getInfo(tag: String): String = select("li:has(.tags_text:contains($tag)) a.tag")
+    override fun Element.getInfo(tag: String): String = select(".hr-gallery-entity-group:has(.hr-gallery-entity-label:contains($tag)) .hr-gallery-tag")
         .joinToString {
-            val name = it.selectFirst(".item_name")?.ownText() ?: ""
+            val name = it.selectFirst(".hr-gallery-tag__name")?.text().orEmpty()
             if (tag.contains(regexTag)) {
                 genres[name] = it.attr("href")
                     .removeSuffix("/").substringAfterLast('/')
             }
-            listOf(
-                name,
-                it.select(".split_tag").text()
-                    .removePrefix("| ")
-                    .trim(),
-            )
-                .filter { s -> s.isNotBlank() }
-                .joinToString()
+            name
         }
 
-    override fun Element.getCover() = selectFirst(".left_cover img")?.imgAttr()
+    override fun Element.getInfoPages(document: Document?): String? = document?.selectFirst("#js-thumbs-grid")
+        ?.attr("data-total-pages")
+        ?.takeIf { it.isNotBlank() }
+        ?.let { "Pages: $it" }
 
-    override val mangaDetailInfoSelector = ".gallery_first"
+    override fun Element.getCover() = selectFirst(".hr-gallery-cover img")?.imgAttr()
+
+    override val mangaDetailInfoSelector = ".hr-gallery-overview"
 
     /* Pages */
-    override val thumbnailSelector = ".gthumb"
-    override val pageUri = "view"
+    override val pageUri = "g"
+
+    override fun pageListRequest(chapter: SChapter): Request {
+        val galleryId = chapter.url.trimEnd('/').substringAfterLast('/')
+        return GET("$baseUrl/$pageUri/$galleryId/1/", headers)
+    }
+
+    // The reader embeds the whole page list next to the first image, no need to open each page.
+    override fun pageListParse(document: Document): List<Page> {
+        val pages = document.selectFirst("script#readerPagesJson")?.data()
+            ?: throw Exception("Failed to load page list")
+        val imagesUri = document.selectFirst("img#readerImg")?.imgAttr()?.substringBeforeLast('/')
+            ?: throw Exception("Failed to load page list")
+
+        return pages.parseAs<List<ReaderPage>>().map {
+            Page(it.page - 1, imageUrl = "$imagesUri/${it.page}.${it.ext}")
+        }
+    }
 
     /* Filters */
-    override fun tagsParser(document: Document): List<Genre> = document.select(".gtags .gallery_title a")
-        .mapNotNull {
+    override fun tagsParser(document: Document): List<Genre> = document.select("article.hr-taxonomy-card .hr-taxonomy-card__title a")
+        .map {
             Genre(
-                it.ownText(),
+                it.text(),
                 it.attr("href")
                     .removeSuffix("/").substringAfterLast('/'),
             )
         }
+
+    @Serializable
+    private class ReaderPage(val page: Int, val ext: String)
 }
