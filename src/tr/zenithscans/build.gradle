@@ -1,0 +1,10 @@
+ext {
+    extName = 'Zenith Scans'
+    extClass = '.ZenithScans'
+    themePkg = 'mangathemesia'
+    baseUrl = 'https://zenithscans.com'
+    overrideVersionCode = 1
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
