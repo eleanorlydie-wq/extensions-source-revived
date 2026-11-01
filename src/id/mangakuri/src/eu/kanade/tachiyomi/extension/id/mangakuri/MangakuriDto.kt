@@ -48,7 +48,8 @@ class ChapterDetailDto(
 
 @Serializable
 class ChapterPagesDto(
-    val pages: List<PageDto>,
+    val pages: List<PageDto> = emptyList(),
+    @SerialName("login_required") val loginRequired: Boolean = false,
 )
 
 @Serializable

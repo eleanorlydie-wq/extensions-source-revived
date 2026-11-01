@@ -23,7 +23,7 @@ class Mangakuri : HttpSource() {
 
     override val name = "Mangakuri"
 
-    override val baseUrl = "https://lc1.$DOMAIN"
+    override val baseUrl = "https://lc2.$DOMAIN"
 
     override val lang = "id"
 
@@ -175,6 +175,9 @@ class Mangakuri : HttpSource() {
 
     override fun pageListParse(response: Response): List<Page> {
         val dto = response.parseAs<ChapterDetailDto>()
+        if (dto.chapter.pages.isEmpty() && dto.chapter.loginRequired) {
+            throw Exception("This site now requires an account to read chapters")
+        }
         return dto.chapter.pages.mapIndexed { i, page ->
             Page(i, imageUrl = page.imageUrl)
         }
