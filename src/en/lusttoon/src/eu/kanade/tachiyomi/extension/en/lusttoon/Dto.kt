@@ -2,8 +2,8 @@ package eu.kanade.tachiyomi.extension.en.lusttoon
 
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
-import kotlinx.serialization.SerialName
 import keiyoushi.utils.parseAs
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
