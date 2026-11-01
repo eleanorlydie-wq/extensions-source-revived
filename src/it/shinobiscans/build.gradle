@@ -1,0 +1,10 @@
+ext {
+    extName = 'Shinobi Scans'
+    extClass = '.ShinobiScans'
+    themePkg = 'madara'
+    baseUrl = 'https://shinobiscans.com'
+    overrideVersionCode = 0
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
