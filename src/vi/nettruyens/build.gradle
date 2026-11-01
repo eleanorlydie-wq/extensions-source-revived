@@ -1,7 +1,7 @@
 ext {
     extName = 'NetTruyenS (unoriginal)'
     extClass = '.NetTruyenS'
-    extVersionCode = 3
+    extVersionCode = 4
     isNsfw = true
 }
 

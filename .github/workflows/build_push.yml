@@ -173,7 +173,7 @@ jobs:
           DELETE="$(python - <<'EOF'
           import json, os, sys
           from pathlib import Path
-          built = {p.name.split("-v")[0].removeprefix("tachiyomi-") for p in Path("main/repo/apk").glob("*.apk")}
+          built = {p.name.rsplit("-v", 1)[0].removeprefix("tachiyomi-") for p in Path("main/repo/apk").glob("*.apk")}
           modules = json.loads(os.environ["DELETE"])
           kept = [m for m in modules if m in built or not Path("main/src", *m.split(".", 1)).is_dir()]
           print("Keeping published copy of unbuilt modules:", sorted(set(modules) - set(kept)), file=sys.stderr)
