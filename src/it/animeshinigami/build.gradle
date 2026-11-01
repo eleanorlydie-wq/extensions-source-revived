@@ -1,0 +1,10 @@
+ext {
+    extName = 'AnimeShinigami'
+    extClass = '.AnimeShinigami'
+    themePkg = 'madara'
+    baseUrl = 'https://www.animeshinigami.com'
+    overrideVersionCode = 0
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
