@@ -53,7 +53,7 @@ internal class SortFilter :
         Selection(0, false),
     ) {
     companion object {
-        val VALUES = arrayOf("views", "trending", "dateAdded", "released", "avgRating", "title")
+        val VALUES = arrayOf("views", "trending", "dateAdded", "released", "mbRating", "title")
     }
 }
 
