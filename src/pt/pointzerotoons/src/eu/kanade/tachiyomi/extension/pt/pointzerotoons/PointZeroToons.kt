@@ -2,13 +2,20 @@ package eu.kanade.tachiyomi.extension.pt.pointzerotoons
 
 import android.util.Base64
 import eu.kanade.tachiyomi.multisrc.mangathemesia.MangaThemesia
+import eu.kanade.tachiyomi.network.GET
+import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.source.model.SChapter
+import eu.kanade.tachiyomi.source.model.SManga
 import keiyoushi.network.rateLimit
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.Request
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import java.lang.IllegalArgumentException
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 class PointZeroToons :
@@ -22,7 +29,81 @@ class PointZeroToons :
         .rateLimit(3)
         .build()
 
-    override val seriesThumbnailSelector = ".tx-hero-cover > img.wp-post-image"
+    // The site's custom theme pages by path and searches with "s"
+    override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
+        val url = super.searchMangaRequest(page, query, filters).url
+        val order = when (url.queryParameter("order")) {
+            "update", "latest" -> "updated"
+            "" -> null
+            else -> url.queryParameter("order")
+        }
+        val newUrl = url.newBuilder()
+            .removeAllQueryParameters("title")
+            .removeAllQueryParameters("page")
+            .removeAllQueryParameters("order")
+            .apply {
+                if (page > 1) {
+                    addPathSegment("page")
+                    addPathSegment(page.toString())
+                    addPathSegment("")
+                }
+                if (query.isNotBlank()) addQueryParameter("s", query)
+                if (order != null) addQueryParameter("order", order)
+            }
+            .build()
+
+        return GET(newUrl, headers)
+    }
+
+    override fun searchMangaSelector() = "article.inkra-catalog-card"
+
+    override fun searchMangaFromElement(element: Element) = SManga.create().apply {
+        thumbnail_url = element.selectFirst("img")?.imgAttr()
+        val link = element.selectFirst("h3 a")!!
+        title = link.text()
+        setUrlWithoutDomain(link.attr("href"))
+    }
+
+    override fun searchMangaNextPageSelector() = "a.next.page-numbers"
+
+    override val seriesDetailsSelector = "main.inkra-main"
+    override val seriesTitleSelector = "h1.inkra-page-title"
+    override val seriesArtistSelector = ".inkra-series-detail-list div:has(dt:contains(Artista)) dd"
+    override val seriesAuthorSelector = ".inkra-series-detail-list div:has(dt:contains(Autor)) dd"
+    override val seriesDescriptionSelector = ".inkra-series-synopsis"
+    override val seriesAltNameSelector = ".inkra-series-alt"
+    override val seriesGenreSelector = ".inkra-genre-tags a"
+    override val seriesTypeSelector = ".inkra-series-pill--type"
+    override val seriesStatusSelector = ".inkra-series-pill--status"
+    override val seriesThumbnailSelector = ".inkra-series-cover img"
+
+    override fun chapterListSelector() = "article.inkra-chapter-item"
+
+    override fun chapterFromElement(element: Element) = SChapter.create().apply {
+        val link = element.selectFirst("a.inkra-chapter-item__link")!!
+        setUrlWithoutDomain(link.attr("href"))
+        name = element.selectFirst(".inkra-chapter-item__label")!!.text()
+        date_upload = parseRelativeDate(element.selectFirst(".inkra-chapter-item__date")?.text())
+    }
+
+    // "2 meses atrás"
+    private fun parseRelativeDate(text: String?): Long {
+        val match = text?.let(RELATIVE_DATE_REGEX::find) ?: return 0L
+        val amount = match.groupValues[1].toInt()
+        val field = when (match.groupValues[2]) {
+            "minuto" -> Calendar.MINUTE
+            "hora" -> Calendar.HOUR_OF_DAY
+            "dia" -> Calendar.DAY_OF_MONTH
+            "semana" -> Calendar.WEEK_OF_YEAR
+            "mes", "mês" -> Calendar.MONTH
+            "ano" -> Calendar.YEAR
+            else -> return 0L
+        }
+
+        return Calendar.getInstance().apply { add(field, -amount) }.timeInMillis
+    }
+
+    override val pageSelector = ".inkra-reader-pages img"
 
     override fun pageListParse(document: Document): List<Page> {
         // "ts_reader.run({" in base64
@@ -39,5 +120,9 @@ class PointZeroToons :
         return imageList.mapIndexed { i, jsonEl ->
             Page(i, imageUrl = jsonEl.jsonPrimitive.content)
         }
+    }
+
+    companion object {
+        private val RELATIVE_DATE_REGEX = """(\d+)\s+(minuto|hora|dia|semana|mes|mês|ano)""".toRegex()
     }
 }
