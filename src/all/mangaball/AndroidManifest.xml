@@ -11,6 +11,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
 
+                <data android:host="mangaball.com" />
                 <data android:host="mangaball.net" />
                 <data android:scheme="https" />
                 <data android:pathPattern="/title-detail/..*" />
