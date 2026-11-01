@@ -1,44 +1,27 @@
 package eu.kanade.tachiyomi.extension.ar.mangahub
 
-import eu.kanade.tachiyomi.multisrc.zeistmanga.ZeistManga
-import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.multisrc.madara.Madara
 import keiyoushi.network.rateLimit
-import okhttp3.Response
-import org.jsoup.Jsoup
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class MangaHub :
-    ZeistManga(
+    Madara(
         "MangaHub",
         "https://mangaxhentai.com",
         "ar",
+        SimpleDateFormat("MMMM d, yyyy", Locale("ar")),
     ) {
     override val client = super.client.newBuilder()
         .rateLimit(3)
         .build()
 
-    // Missing popular
-    override val supportsLatest = false
-    override fun popularMangaRequest(page: Int) = latestUpdatesRequest(page)
-    override fun popularMangaParse(response: Response) = latestUpdatesParse(response)
+    override fun popularMangaSelector() = "article.page-item-detail.manga"
+    override val popularMangaUrlSelector = ".post-title a"
 
-    override val mangaDetailsSelector = ".grid.gap-5.gta-series"
-    override val mangaDetailsSelectorInfo = "dt"
+    override fun searchMangaSelector() = "article.c-tabs-item__content"
+    override val searchMangaUrlSelector = ".post-title a"
 
-    override fun mangaDetailsParse(response: Response): SManga {
-        val document = Jsoup.parse(
-            response.peekBody(Long.MAX_VALUE).string(),
-            response.request.url.toString(),
-        )
-        return super.mangaDetailsParse(response).apply {
-            document
-                .selectFirst("dt:contains(الإشارات) + dd")
-                ?.text()
-                ?.split(",")
-                ?.filterNot(String::isEmpty)
-                ?.joinToString()
-                ?.also { genre = it }
-        }
-    }
-
-    override val pageListSelector = "article#reader .separator, div.image-container"
+    override val useLoadMoreRequest = LoadMoreStrategy.Never
+    override val useNewChapterEndpoint = true
 }

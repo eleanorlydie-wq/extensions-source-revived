@@ -1,9 +1,9 @@
 ext {
     extName = 'MangaHub'
     extClass = '.MangaHub'
-    themePkg = 'zeistmanga'
+    themePkg = 'madara'
     baseUrl = 'https://mangaxhentai.com'
-    overrideVersionCode = 4
+    overrideVersionCode = 43
     isNsfw = true
 }
 
