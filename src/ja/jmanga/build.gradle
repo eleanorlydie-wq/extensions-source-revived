@@ -1,9 +1,9 @@
 ext {
     extName = 'Jmanga'
     extClass = '.Jmanga'
-    overrideVersionCode = 1
+    overrideVersionCode = 2
     isNsfw = true
     themePkg = "mangareader"
-    baseUrl = "https://jmanga.beer"
+    baseUrl = "https://jmanga.golf"
 }
 apply plugin: "kei.plugins.extension.legacy"

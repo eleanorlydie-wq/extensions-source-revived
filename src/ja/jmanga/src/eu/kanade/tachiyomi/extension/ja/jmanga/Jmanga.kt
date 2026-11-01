@@ -13,10 +13,10 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 
 class Jmanga :
-    MangaReader("Jmanga", "https://jmanga.beer", "ja"),
+    MangaReader("Jmanga", "https://jmanga.golf", "ja"),
     ConfigurableSource {
 
-    private val defaultBaseUrl = "https://jmanga.beer"
+    private val defaultBaseUrl = "https://jmanga.golf"
 
     private var cachedBaseUrl: String = ""
     private val SharedPreferences.prefBaseUrl: String get() {
@@ -36,6 +36,12 @@ class Jmanga :
     }
 
     override val baseUrl: String get() = preferences.prefBaseUrl
+
+    override val chapterIdSelect = "ja-chaps"
+
+    override fun getAjaxUrl(id: String): String = "$baseUrl/json/chapter?mode=vertical&id=$id"
+
+    override fun pageListParseSelector(): String = ".iv-card > img"
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         EditTextPreference(screen.context).apply {
