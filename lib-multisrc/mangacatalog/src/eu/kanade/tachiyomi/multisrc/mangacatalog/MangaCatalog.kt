@@ -106,8 +106,9 @@ abstract class MangaCatalog(
 
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
-        return document.select("img[data-src]")
-            .mapIndexed { index, img -> Page(index, imageUrl = img.attr("abs:data-src")) }
+        // Some sites lazy load through data-src, others put the image straight in src on img.js-page.
+        return document.select("img.js-page, img[data-src]")
+            .mapIndexed { index, img -> Page(index, imageUrl = img.attr("abs:data-src").ifEmpty { img.attr("abs:src") }) }
     }
 
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
