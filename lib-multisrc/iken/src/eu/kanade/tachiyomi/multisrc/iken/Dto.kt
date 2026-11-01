@@ -104,13 +104,25 @@ class ChapterListResponse(
 )
 
 @Serializable
+class ChapterPageResponse(
+    val post: ChapterPagePost,
+    val totalChapterCount: Int = 0,
+)
+
+@Serializable
+class ChapterPagePost(
+    val chapters: List<Chapter> = emptyList(),
+)
+
+@Serializable
 class Chapter(
     private val id: Int,
     private val slug: String,
     private val number: JsonPrimitive,
     private val title: String? = null,
     private val createdAt: String,
-    private val chapterStatus: String,
+    // The paged chapter endpoint only lists public chapters and leaves the status out.
+    private val chapterStatus: String = "PUBLIC",
     private val isAccessible: Boolean,
     private val isLocked: Boolean? = false,
     private val isTimeLocked: Boolean? = false,
