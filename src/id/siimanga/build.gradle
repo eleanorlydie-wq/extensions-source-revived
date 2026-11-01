@@ -3,7 +3,7 @@ ext {
     extClass = '.Siikomik'
     themePkg = 'madara'
     baseUrl = 'https://siikomik.id'
-    overrideVersionCode = 1
+    overrideVersionCode = 2
     isNsfw = true
 }
 
