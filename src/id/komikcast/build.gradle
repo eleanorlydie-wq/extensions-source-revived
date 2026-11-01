@@ -1,0 +1,8 @@
+ext {
+    extName = 'VoraToon'
+    extClass = '.VoraToon'
+    extVersionCode = 81
+    isNsfw = true
+}
+
+apply plugin: "kei.plugins.extension.legacy"
