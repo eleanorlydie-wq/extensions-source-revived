@@ -75,11 +75,17 @@ class Mokuro :
     // Chapters
     // ===============================
 
-    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = getLibrary().map { library ->
-        val series = library.series.find { it.path == manga.url }
-            ?: throw Exception("Series not found")
-
-        series.volumes.asReversed().map { it.toSChapter(series) }
+    // The library listing no longer embeds volumes; each series has its own endpoint.
+    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> {
+        val url = "$apiBaseUrl/series".toHttpUrl().newBuilder()
+            .addQueryParameter("name", manga.url)
+            .build()
+        return client.newCall(GET(url, headers))
+            .asObservableSuccess()
+            .map { response ->
+                val series = response.parseAs<SeriesDto>()
+                series.volumes.asReversed().map { it.toSChapter(series) }
+            }
     }
 
     override fun getChapterUrl(chapter: SChapter): String {

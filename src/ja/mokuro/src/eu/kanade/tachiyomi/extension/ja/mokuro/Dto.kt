@@ -14,9 +14,9 @@ class LibraryDto(
 @Serializable
 class SeriesDto(
     val name: String,
-    val path: String,
+    val path: String = name,
     private val cover: String? = null,
-    val volumes: List<VolumeDto>,
+    val volumes: List<VolumeDto> = emptyList(),
 ) {
     fun toSManga(apiBaseUrl: String, useLatestVolumeCover: Boolean = false): SManga = SManga.create().apply {
         title = name
