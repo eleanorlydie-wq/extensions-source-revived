@@ -1,20 +1,21 @@
-# Keiyoushi Extensions
+# Manga Extensions
 
-### Please give the repo a :star:
+Source code for a repository of manga extensions for Tachiyomi-compatible apps. It is an independently
+maintained fork of `keiyoushi/extensions-source`.
 
-| Build                                                                                                                                                                               | Need Help?                                                                                                                                              |
-|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [![CI](https://github.com/keiyoushi/extensions-source/actions/workflows/build_push.yml/badge.svg)](https://github.com/keiyoushi/extensions-source/actions/workflows/build_push.yml) | [![Discord](https://img.shields.io/discord/1193460528052453448.svg?label=discord&labelColor=7289da&color=2c2f33&style=flat)](https://discord.gg/3FbCpdKbdY) |
+[![CI](https://github.com/eleanorlydie-wq/extensions-source-revived/actions/workflows/build_push.yml/badge.svg)](https://github.com/eleanorlydie-wq/extensions-source-revived/actions/workflows/build_push.yml)
 
 ## Usage
-**If you are new to repository/extensions, please read the [Keiyoushi Getting Started guide](https://keiyoushi.github.io/docs/guides/getting-started#adding-the-extension-repo) first.**
 
-* You can add our repo by visiting the [Keiyoushi Website](https://keiyoushi.github.io/add-repo)
-* Otherwise, copy & paste the following URL: https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json
+Add this repo in your app's extension settings by pasting the following URL:
+
+    https://raw.githubusercontent.com/eleanorlydie-wq/extensions/repo/index.min.json
+
+The APK files are listed in the [`repo` branch](https://github.com/eleanorlydie-wq/extensions/tree/repo/apk).
 
 ## Requests
 
-To request a new source or bug fix, [create an issue](https://github.com/keiyoushi/extensions-source/issues/new/choose).
+To request a new source or bug fix, [create an issue](https://github.com/eleanorlydie-wq/extensions-source-revived/issues/new/choose).
 
 Please note that creating an issue does not mean that the source will be added or fixed in a timely
 fashion, because the work is volunteer-based. Some sources may also be impossible to do or prohibitively
@@ -25,9 +26,9 @@ Issues are up-for-grabs for any developer if there is no assigned user already.
 
 ## Contributing
 
-Contributions are welcome!
+Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-Check out the repo's [issue backlog](https://github.com/keiyoushi/extensions-source/issues) for source requests and bug reports.
+Check out the repo's [issue backlog](https://github.com/eleanorlydie-wq/extensions-source-revived/issues) for source requests and bug reports.
 
 ## License
 
@@ -49,5 +50,5 @@ Check out the repo's [issue backlog](https://github.com/keiyoushi/extensions-sou
 
 This project does not have any affiliation with the content providers available.
 
-This project is not affiliated with Mihon/Tachiyomi. Don't ask for help about these extensions at the
-official support means of Mihon/Tachiyomi. All credits to the codebase goes to the original contributors.
+This project is not affiliated with Mihon or Tachiyomi. Don't ask for help about these extensions at
+their official support channels. All credits to the codebase go to the original contributors.
