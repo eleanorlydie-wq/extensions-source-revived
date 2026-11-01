@@ -2,8 +2,8 @@ ext {
     extName = 'Despair Manga'
     extClass = '.DespairManga'
     themePkg = 'mangathemesia'
-    baseUrl = 'https://despair-manga.net'
-    overrideVersionCode = 0
+    baseUrl = 'https://despair-world.com'
+    overrideVersionCode = 1
     isNsfw = false
 }
 

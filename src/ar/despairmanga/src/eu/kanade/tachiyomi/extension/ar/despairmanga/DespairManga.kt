@@ -8,7 +8,7 @@ import okhttp3.Request
 class DespairManga :
     MangaThemesia(
         "Despair Manga",
-        "https://despair-manga.net",
+        "https://despair-world.com",
         "ar",
     ) {
 
