@@ -138,12 +138,13 @@ class SkyMangas : HttpSource() {
     }
 
     // =============================== Pages =================================
-    override fun pageListParse(response: Response): List<Page> {
-        val document = response.asJsoup()
-        return document.select("div.reader__page img.reader__img").mapIndexed { index, img ->
-            Page(index, imageUrl = img.attr("abs:src"))
-        }
-    }
+    // Pages are lazily rendered by the browser; the server-side state embeds the whole list.
+    override fun pageListParse(response: Response): List<Page> = PAGE_REGEX.findAll(response.body.string())
+        .map { it.groupValues[1].toInt() to it.groupValues[2] }
+        .distinctBy { it.first }
+        .sortedBy { it.first }
+        .mapIndexed { index, (_, path) -> Page(index, imageUrl = "https://api.skymangas.com$path") }
+        .toList()
 
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
 }
@@ -162,3 +163,5 @@ data class ComicSeriesDto(
 data class PersonDto(
     val name: String? = null,
 )
+
+private val PAGE_REGEX = Regex(""""pageNumber":(\d+),"imageUrl":"(/api/v1/images/release-page[^"]+)"""")
