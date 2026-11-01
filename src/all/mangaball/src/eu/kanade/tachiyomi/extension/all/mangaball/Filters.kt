@@ -26,17 +26,18 @@ abstract class TriStateGroupFilter<T>(
 }
 
 class SortFilter :
-    SelectFilter<String>(
+    SelectFilter<Pair<String, String>>(
         "Sort By",
         options = listOf(
-            "Lastest Updated Chapters" to "updated_chapters_desc",
-            "Oldest Updated Chapters" to "updated_chapters_asc",
-            "Lastest Created" to "created_at_desc",
-            "Oldest Created" to "created_at_asc",
-            "Title A-Z" to "name_asc",
-            "Title Z-A" to "name_desc",
-            "Views High to Low" to "views_desc",
-            "Views Low to High" to "views_asc",
+            "Lastest Updated Chapters" to ("lastupdate" to "desc"),
+            "Oldest Updated Chapters" to ("lastupdate" to "asc"),
+            "Lastest Created" to ("created_at" to "desc"),
+            "Oldest Created" to ("created_at" to "asc"),
+            "Title A-Z" to ("name" to "asc"),
+            "Title Z-A" to ("name" to "desc"),
+            "Views High to Low" to ("views" to "desc"),
+            "Views Low to High" to ("views" to "asc"),
+            "Top Rated" to ("rating" to "desc"),
         ),
     )
 
@@ -168,19 +169,10 @@ class ThemeFilter :
 
 class TagIncludeMode :
     SelectFilter<String>(
-        "Tag Include Mode",
+        "Tag Mode",
         options = listOf(
-            "AND" to "and",
-            "OR" to "or",
-        ),
-    )
-
-class TagExcludeMode :
-    SelectFilter<String>(
-        "Tag Exclude Mode",
-        options = listOf(
-            "AND" to "and",
-            "OR" to "or",
+            "AND" to "AND",
+            "OR" to "OR",
         ),
     )
 
@@ -188,7 +180,7 @@ class DemographicFilter :
     SelectFilter<String>(
         "Magazine Demographic",
         options = listOf(
-            "Any" to "any",
+            "Any" to "all",
             "Shounen" to "shounen",
             "Shoujo" to "shoujo",
             "Seinen" to "seinen",
@@ -202,7 +194,7 @@ class StatusFilter :
     SelectFilter<String>(
         "Publication Status",
         options = listOf(
-            "Any" to "any",
+            "Any" to "all",
             "Ongoing" to "ongoing",
             "Completed" to "completed",
             "Hiatus" to "hiatus",
