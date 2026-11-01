@@ -1,0 +1,10 @@
+ext {
+    extName = 'Hunlight Comics'
+    extClass = '.HunlightComics'
+    themePkg = 'madara'
+    baseUrl = 'https://hunlightcomics.com'
+    overrideVersionCode = 0
+    isNsfw = true
+}
+
+apply plugin: "kei.plugins.extension.legacy"
