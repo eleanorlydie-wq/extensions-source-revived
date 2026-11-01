@@ -77,7 +77,7 @@ class ImageInterceptor : Interceptor {
         val originalWidth = originalBitmap.width
         val originalHeight = originalBitmap.height
 
-        val descrambledBitmap = Bitmap.createBitmap(originalWidth, originalHeight, originalBitmap.config)
+        val descrambledBitmap = Bitmap.createBitmap(originalWidth, originalHeight, originalBitmap.config ?: Bitmap.Config.ARGB_8888)
         val canvas = Canvas(descrambledBitmap)
 
         val (tileWidth, tileHeight) = when (version) {
