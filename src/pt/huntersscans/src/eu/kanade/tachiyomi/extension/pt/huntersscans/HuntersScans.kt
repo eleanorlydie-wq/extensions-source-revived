@@ -66,6 +66,14 @@ class HuntersScans :
     }
 
     override fun pageListParse(document: Document): List<Page> {
+        val canvases = document.select("canvas[data-page-url]")
+        if (canvases.isNotEmpty()) {
+            return canvases.mapIndexed { index, canvas ->
+                val imageUrl = canvas.attr("data-page-url").replaceFirst("http://", "https://")
+                Page(index, document.location(), imageUrl)
+            }
+        }
+
         val script = document.selectFirst("script:containsData(_HuntersOpts)")?.data()
             ?: return super.pageListParse(document)
 
