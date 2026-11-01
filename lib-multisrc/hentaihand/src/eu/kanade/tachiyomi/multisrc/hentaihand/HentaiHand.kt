@@ -257,7 +257,7 @@ abstract class HentaiHand(
         setOnPreferenceChangeListener { _, newValue ->
             try {
                 val res = preferences.edit().putString(title, newValue as String).commit()
-                Toast.makeText(context, "Restart Tachiyomi to apply new setting.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Restart the app to apply new setting.", Toast.LENGTH_LONG).show()
                 res
             } catch (e: Exception) {
                 e.printStackTrace()

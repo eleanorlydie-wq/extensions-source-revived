@@ -146,7 +146,7 @@ internal val HttpUrl.rawRelative: String?
     }
 
 internal val reportPrefix: String
-    get() = """Error! Report on GitHub (tachiyomiorg/tachiyomi-extensions)"""
+    get() = """Error! Report on GitHub (eleanorlydie-wq/extensions-source-revived)"""
 
 /**
  * Simple named exception to differentiate it with all other "unexpected" exceptions.

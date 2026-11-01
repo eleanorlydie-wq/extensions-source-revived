@@ -40,7 +40,7 @@ class OnlyTheBestHentai : HttpSource() {
         if (peek.contains("One moment, please") || peek.contains("wsidchk")) {
             throw Exception(
                 "Bot protection detected. Open this source in WebView to solve the challenge, " +
-                    "then return to Mihon.",
+                    "then return to the app.",
             )
         }
         response

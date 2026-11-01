@@ -427,7 +427,7 @@ class Manhuagui(
     companion object {
         private const val SHOW_R18_PREF = "showR18Default"
         private const val SHOW_R18_PREF_TITLE = "显示R18作品"
-        private const val SHOW_R18_PREF_SUMMARY = "请确认您的IP不在漫画柜的屏蔽列表内，例如中国大陆IP。需要重启软件以生效。\n开启后如需关闭，需要到Tachiyomi高级设置内清除Cookies后才能生效。"
+        private const val SHOW_R18_PREF_SUMMARY = "请确认您的IP不在漫画柜的屏蔽列表内，例如中国大陆IP。需要重启软件以生效。\n开启后如需关闭，需要到应用高级设置内清除Cookies后才能生效。"
 
         private const val SHOW_ZH_HANT_WEBSITE_PREF = "showZhHantWebsite"
         private const val SHOW_ZH_HANT_WEBSITE_PREF_TITLE = "使用繁体版网站"

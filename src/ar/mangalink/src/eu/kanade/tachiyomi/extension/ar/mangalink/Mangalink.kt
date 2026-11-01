@@ -25,7 +25,7 @@ class Mangalink :
     private val preferences: SharedPreferences by getPreferencesLazy()
 
     companion object {
-        private const val RESTART_TACHIYOMI = ".لتطبيق الإعدادات الجديدة Tachiyomi أعد تشغيل"
+        private const val RESTART_TACHIYOMI = ".لتطبيق الإعدادات الجديدة أعد تشغيل التطبيق"
         private const val BASE_URL_PREF_TITLE = "تعديل الرابط"
         private const val BASE_URL_PREF = "overrideBaseUrl"
         private const val DEFAULT_BASE_URL_PREF = "defaultBaseUrl"

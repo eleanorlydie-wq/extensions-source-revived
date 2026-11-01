@@ -357,7 +357,7 @@ open class Komga(private val suffix: String = "") :
 
                 setDefaultValue(PREF_EXTRA_SOURCES_DEFAULT)
                 setOnPreferenceChangeListener { _, _ ->
-                    Toast.makeText(screen.context, "Restart Tachiyomi to apply new setting.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(screen.context, "Restart the app to apply new setting.", Toast.LENGTH_LONG).show()
                     true
                 }
             }.also(screen::addPreference)

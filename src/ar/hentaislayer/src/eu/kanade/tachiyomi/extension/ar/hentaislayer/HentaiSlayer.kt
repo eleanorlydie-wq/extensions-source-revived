@@ -52,7 +52,7 @@ class HentaiSlayer :
             setOnPreferenceChangeListener { _, _ ->
                 Toast.makeText(
                     screen.context,
-                    ".لتطبيق الإعدادات الجديدة Tachiyomi أعد تشغيل",
+                    ".لتطبيق الإعدادات الجديدة أعد تشغيل التطبيق",
                     Toast.LENGTH_LONG,
                 ).show()
                 true
