@@ -22,6 +22,7 @@ class Mangakakalot :
     MangaBox(
         "Mangakakalot",
         arrayOf(
+            "www.kakamanga.com",
             "www.mangakakalot.gg",
             "www.mangakakalove.com",
         ),
@@ -79,14 +80,11 @@ class Mangakakalot :
 
     override fun mangaDetailsRequest(manga: SManga): Request {
         val currentSlug = manga.url.substringAfterLast("/")
-        val targetUrl = if (currentSlug.matches(idSlugRegex)) {
-            val newSlug = titleToSlug(manga.title)
-            "$baseUrl/manga/$newSlug"
-        } else {
-            "$baseUrl${manga.url}"
+        if (currentSlug.matches(idSlugRegex)) {
+            return GET("$baseUrl/manga/${titleToSlug(manga.title)}", headers)
         }
 
-        return GET(targetUrl, headers)
+        return super.mangaDetailsRequest(manga)
     }
 
     override fun mangaDetailsParse(document: Document): SManga {
