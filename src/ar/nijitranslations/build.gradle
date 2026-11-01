@@ -1,0 +1,10 @@
+ext {
+    extName = 'Niji Translations'
+    extClass = '.NijiTranslations'
+    themePkg = 'madara'
+    baseUrl = 'https://niji-translations.com'
+    overrideVersionCode = 2
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
