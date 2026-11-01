@@ -168,11 +168,21 @@ class LustToon : HttpSource() {
 
     override fun pageListParse(response: Response): List<Page> {
         val document = response.asJsoup()
-        val images = document.select("div.max-w-4xl img")
-
-        return images.mapIndexed { i, img ->
-            Page(i, imageUrl = img.absUrl("src").replace("http://", "https://"))
+        val pageches = document.extractNextJs<PagechesDto> { element ->
+            element is JsonObject && "urlImg" in element && "chapterId" in element
         }
+
+        val images = pageches?.images?.ifEmpty { null }
+            ?: imageUrlRegex.findAll(document.html())
+                .map { it.value }
+                .filter { it.contains("/serie/") }
+                .toList()
+
+        return images
+            .map { it.replace("http://", "https://") }
+            .distinct()
+            .filterNot { it.contains("brakeout") }
+            .mapIndexed { i, url -> Page(i, imageUrl = url) }
     }
 
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
@@ -186,4 +196,8 @@ class LustToon : HttpSource() {
         StatusFilter(),
         GenreFilter(),
     )
+
+    companion object {
+        private val imageUrlRegex = Regex("""https?://media\.lustoon\.com/file/[^"\s']+\.(?:jpg|jpeg|png|webp|avif)""", RegexOption.IGNORE_CASE)
+    }
 }
