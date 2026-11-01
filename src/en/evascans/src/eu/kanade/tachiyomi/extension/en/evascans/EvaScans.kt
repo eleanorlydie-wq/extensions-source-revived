@@ -28,8 +28,8 @@ class EvaScans :
             ?: element.selectFirst("img")?.imgAttr()
     }
 
-    // Fix paid chapter filtering - paid chapters have .locked-badge class
-    override fun chapterListSelector(): String = "#chapterlist li:not(:has(.locked-badge))"
+    // Paid chapters open a modal instead of linking to the chapter
+    override fun chapterListSelector(): String = "#chapterlist li:has(a[href]):not(:has(.locked-badge))"
 
     // Fix page reading - site uses custom reader with camelCase ID
     override val pageSelector = "div#readerArea img"
