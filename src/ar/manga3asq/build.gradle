@@ -2,8 +2,8 @@ ext {
     extName = '3asq'
     extClass = '.Manga3asq'
     themePkg = 'madara'
-    baseUrl = 'https://3asq.org'
-    overrideVersionCode = 2
+    baseUrl = 'https://3asq.online'
+    overrideVersionCode = 3
     isNsfw = false
 }
 
