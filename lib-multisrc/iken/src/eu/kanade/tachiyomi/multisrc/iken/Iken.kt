@@ -343,9 +343,22 @@ abstract class Iken(
 
         assert(!data.post.isNovel) { "Novels are unsupported" }
 
-        return data.post.chapters
+        // Newer sites leave the post's chapter list empty and serve it from a paged endpoint.
+        val chapters = data.post.chapters.ifEmpty { data.post.id?.let(::fetchChapterPages).orEmpty() }
+
+        return chapters
             .filter { it.isVisible() }
             .map { it.toSChapter(data.post.slug) }
+    }
+
+    private fun fetchChapterPages(postId: Int): List<Chapter> {
+        val chapters = mutableListOf<Chapter>()
+        while (true) {
+            val url = "$apiUrl/api/chapters?postId=$postId&skip=${chapters.size}&take=$CHAPTER_PAGE_SIZE&order=desc"
+            val page = client.newCall(GET(url, headers)).execute().parseAs<ChapterPageResponse>()
+            chapters += page.post.chapters
+            if (page.post.chapters.isEmpty() || chapters.size >= page.totalChapterCount) return chapters
+        }
     }
 
     // Related Manga
@@ -423,5 +436,6 @@ abstract class Iken(
         const val SHOW_LOCKED_CHAPTER_PREF_KEY = "pref_show_locked_chapters"
         val JSON_MEDIA_TYPE = "application/json".toMediaType()
         val numberRegex = Regex("\\d+")
+        private const val CHAPTER_PAGE_SIZE = 500
     }
 }
