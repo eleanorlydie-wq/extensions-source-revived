@@ -32,7 +32,7 @@ class Bbato : HttpSource() {
 
     // ============================== Popular ==============================
 
-    override fun popularMangaRequest(page: Int): Request = GET(baseUrl, headers)
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/home", headers)
 
     override fun popularMangaParse(response: Response): MangasPage {
         val document = response.asJsoup()
