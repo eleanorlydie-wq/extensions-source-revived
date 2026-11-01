@@ -1,0 +1,10 @@
+ext {
+    extName = 'Rakuen Translations'
+    extClass = '.RakuenTranslations'
+    themePkg = 'mangathemesia'
+    baseUrl = 'https://rakuentranslations.com'
+    overrideVersionCode = 1
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
