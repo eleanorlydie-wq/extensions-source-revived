@@ -3,12 +3,15 @@ package eu.kanade.tachiyomi.extension.id.siimanga
 import eu.kanade.tachiyomi.multisrc.madara.Madara
 import eu.kanade.tachiyomi.source.model.SChapter
 import org.jsoup.nodes.Element
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class Siikomik :
     Madara(
         "Siikomik",
         "https://siikomik.id",
         "id",
+        SimpleDateFormat("MMMM d, yyyy", Locale("id")),
     ) {
     override val versionId = 3
 
