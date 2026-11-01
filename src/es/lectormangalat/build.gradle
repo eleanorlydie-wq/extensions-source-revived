@@ -1,9 +1,8 @@
 ext {
     extName = 'LectorManga.lat'
     extClass = '.LectorMangaLat'
-    themePkg = 'madara'
     baseUrl = 'https://lectormangass.net'
-    overrideVersionCode = 6
+    extVersionCode = 58
     isNsfw = true
 }
 

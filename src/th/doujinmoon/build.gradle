@@ -2,8 +2,8 @@ ext {
     extName = "Doujin Moon"
     extClass = ".DoujinMoon"
     baseUrl = "https://doujinmoon.com"
-    isNsfw = "true"
-    overrideVersionCode = 0
+    isNsfw = true
+    overrideVersionCode = 1
     themePkg = "mangathemesia"
 }
 

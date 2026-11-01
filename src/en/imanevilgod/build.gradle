@@ -1,9 +1,8 @@
 ext {
     extName = "I'm An Evil God"
     extClass = '.IAmAnEvilGod'
-    themePkg = 'mangacatalog'
     baseUrl = 'https://imanevilgod.com'
-    overrideVersionCode = 0
+    extVersionCode = 8
     isNsfw = false
 }
 
