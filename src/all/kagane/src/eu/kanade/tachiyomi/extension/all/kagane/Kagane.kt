@@ -44,8 +44,8 @@ abstract class Kagane(
 
     override val name = "Kagane"
 
-    private val domain = "kagane.to"
-    private val apiUrl = "https://yuzuki.$domain"
+    private val domain = "kagane.moe"
+    private val apiUrl = "https://$domain"
     override val baseUrl = "https://$domain"
 
     override val supportsLatest = true
@@ -331,25 +331,27 @@ abstract class Kagane(
 
     // ============================== Chapters ==============================
 
-    override fun chapterListParse(response: Response): List<SChapter> {
-        val seriesId = response.request.url.toString()
-            .substringAfterLast("/")
+    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = Observable.fromCallable {
+        val format = client.newCall(mangaDetailsRequest(manga.url)).execute().parseAs<DetailsDto>().format
+        val index = client.newCall(chapterListRequest(manga)).execute().parseAs<BookIndexDto>()
 
-        val dto = response.parseAs<DetailsDto>()
-
-        val useSourceChapterNumber = dto.format in setOf(
+        val useSourceChapterNumber = format in setOf(
             "Dark Horse Comics",
             "Flame Comics",
             "MangaDex",
             "Square Enix Manga",
         )
 
-        return dto.seriesBooks.map { book ->
-            book.toSChapter(seriesId, useSourceChapterNumber, preferences.chapterTitleMode)
-        }.reversed()
+        index.toBooks().sortedByDescending { it.first.number }.map { (book, releasedAt) ->
+            book.toSChapter(manga.url, useSourceChapterNumber, preferences.chapterTitleMode).apply {
+                date_upload = releasedAt?.times(1000) ?: 0L
+            }
+        }
     }
 
-    override fun chapterListRequest(manga: SManga): Request = GET("$apiUrl/api/v2/series/${manga.url}", apiHeaders)
+    override fun chapterListParse(response: Response): List<SChapter> = throw UnsupportedOperationException()
+
+    override fun chapterListRequest(manga: SManga): Request = GET("$apiUrl/api/v2/series/${manga.url}/books/index?fields=List", apiHeaders)
 
     // =============================== Pages ================================
 
@@ -386,7 +388,7 @@ abstract class Kagane(
 
     override fun imageUrlRequest(page: Page): Request = GET(page.imageUrl!!, apiHeaders)
 
-    private var cacheUrl = "https://akari.$domain"
+    private var cacheUrl = "https://$domain"
     private var accessToken: String = ""
     private var integrityToken: String = ""
     private var integrityExp = System.currentTimeMillis()
