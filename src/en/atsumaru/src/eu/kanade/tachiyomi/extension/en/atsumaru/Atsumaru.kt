@@ -48,7 +48,7 @@ class Atsumaru :
 
     // ============================== Popular ===============================
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/api/infinite/trending?page=${page - 1}&types=Manga,Manwha,Manhua,OEL${get18Mode()}", apiHeaders)
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/api/home2/popular?offset=${(page - 1) * BROWSE_LIMIT}&limit=$BROWSE_LIMIT&types=Manga,Manwha,Manhua,OEL&mediums=Comic&timeframe=daily${get18Mode()}", apiHeaders)
 
     override fun popularMangaParse(response: Response): MangasPage {
         val data = response.parseAs<BrowseMangaDto>().items
@@ -58,7 +58,7 @@ class Atsumaru :
 
     // =============================== Latest ===============================
 
-    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/api/infinite/recentlyUpdated?page=${page - 1}&types=Manga,Manwha,Manhua,OEL${get18Mode()}", apiHeaders)
+    override fun latestUpdatesRequest(page: Int): Request = GET("$baseUrl/api/home2/recentlyUpdated?offset=${(page - 1) * BROWSE_LIMIT}&limit=$BROWSE_LIMIT&types=Manga,Manwha,Manhua,OEL&mediums=Comic${get18Mode()}", apiHeaders)
 
     override fun latestUpdatesParse(response: Response): MangasPage = popularMangaParse(response)
 
@@ -317,6 +317,8 @@ class Atsumaru :
         }.let(screen::addPreference)
     }
     companion object {
+        private const val BROWSE_LIMIT = 40
+
         private val PREF_SHOW_18 = "pref_18_mode"
 
         private val PROTOCOL_REGEX = Regex("^https?:?//")
