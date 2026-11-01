@@ -1,11 +1,11 @@
 # Contributing
 
-This guide has some instructions and tips on how to create a new Keiyoushi extension. Please **read
+This guide has some instructions and tips on how to create a new extension. Please **read
 it carefully** if you're a new contributor or don't have any experience on the required languages
 and knowledges.
 
 This guide is not definitive and it's being updated over time. If you find any issues in it, feel
-free to report it through a [Meta Issue](https://github.com/keiyoushi/extensions-source/issues/new?assignees=&labels=Meta+request&template=06_request_meta.yml)
+free to report it through a [Meta Issue](https://github.com/eleanorlydie-wq/extensions-source-revived/issues/new?assignees=&labels=Meta+request&template=06_request_meta.yml)
 or fixing it directly by submitting a Pull Request.
 
 ## Table of Contents
@@ -91,7 +91,7 @@ that existing contributors will not actively teach these to you.
 ### Tools
 
 - [Android Studio](https://developer.android.com/studio)
-- Emulator or phone with developer options enabled and a recent version of Mihon installed
+- Emulator or phone with developer options enabled and a recent extension-compatible app installed
 - [Icon Generator](https://as280093.github.io/AndroidAssetStudio/icons-launcher.html)
 - [Try jsoup](https://try.jsoup.org/)
 
@@ -168,7 +168,7 @@ navigate and build. This will also reduce disk usage and network traffic.
 
     ```bash
     # add upstream
-    git remote add upstream <keiyoushi-repo-url>
+    git remote add upstream <upstream-repo-url>
     # optionally disable push to upstream
     git remote set-url --push upstream no_pushing
     # optionally fetch main only (ignore all other branches)
@@ -310,7 +310,7 @@ With the example used above, the version would be `1.4.1`.
 
 #### Extension API
 
-Extensions rely on [extensions-lib](https://github.com/tachiyomiorg/extensions-lib), which provides
+Extensions rely on [extensions-lib](https://github.com/eleanorlydie-wq/extensions-lib), which provides
 some interfaces and stubs from the [app](https://github.com/mihonapp/mihon) for compilation
 purposes. The actual implementations can be found [in the Mihon source code](https://github.com/mihonapp/mihon/tree/main/app/src/main/java/eu/kanade/tachiyomi/source).
 Referencing the actual implementation will help with understanding extensions' call flow.
@@ -326,14 +326,14 @@ use case. Each lib is self-documented via KDoc comments and/or a README in its o
 
 | Module | Description |
 |---|---|
-| [`lib-cookieinterceptor`](https://github.com/keiyoushi/extensions-source/tree/main/lib/cookieinterceptor) | Injects cookies into OkHttp requests for a given domain |
-| [`lib-cryptoaes`](https://github.com/keiyoushi/extensions-source/tree/main/lib/cryptoaes) | AES-CBC decryption compatible with CryptoJS; JSFuck deobfuscation |
-| [`lib-dataimage`](https://github.com/keiyoushi/extensions-source/tree/main/lib/dataimage) | Decodes base64 `data:image` strings into mock URLs that OkHttp can handle |
-| [`lib-randomua`](https://github.com/keiyoushi/extensions-source/tree/main/lib/randomua) | Fetches and rotates real-world User-Agent strings (requires overriding `getMangaUrl()`) |
-| [`lib-synchrony`](https://github.com/keiyoushi/extensions-source/tree/main/lib/synchrony) | JavaScript deobfuscation via the Synchrony engine (QuickJS sandbox) |
-| [`lib-textinterceptor`](https://github.com/keiyoushi/extensions-source/tree/main/lib/textinterceptor) | Renders plain text or HTML as a PNG image page |
-| [`lib-unpacker`](https://github.com/keiyoushi/extensions-source/tree/main/lib/unpacker) | Unpacks Dean Edwards-packed JavaScript; substring extraction helpers |
-| [`lib-zipinterceptor`](https://github.com/keiyoushi/extensions-source/tree/main/lib/zipinterceptor) | Decodes, stitches, and processes multi-page ZIP/AVIF/SVG image archives |
+| [`lib-cookieinterceptor`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/cookieinterceptor) | Injects cookies into OkHttp requests for a given domain |
+| [`lib-cryptoaes`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/cryptoaes) | AES-CBC decryption compatible with CryptoJS; JSFuck deobfuscation |
+| [`lib-dataimage`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/dataimage) | Decodes base64 `data:image` strings into mock URLs that OkHttp can handle |
+| [`lib-randomua`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/randomua) | Fetches and rotates real-world User-Agent strings (requires overriding `getMangaUrl()`) |
+| [`lib-synchrony`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/synchrony) | JavaScript deobfuscation via the Synchrony engine (QuickJS sandbox) |
+| [`lib-textinterceptor`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/textinterceptor) | Renders plain text or HTML as a PNG image page |
+| [`lib-unpacker`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/unpacker) | Unpacks Dean Edwards-packed JavaScript; substring extraction helpers |
+| [`lib-zipinterceptor`](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/lib/zipinterceptor) | Decodes, stitches, and processes multi-page ZIP/AVIF/SVG image archives |
 
 > [!IMPORTANT]
 > If your module uses `:lib:randomua`, the Spotless check requires your extension to override the `getMangaUrl()` method in your main class, or the build will fail.
@@ -987,7 +987,7 @@ you can use the `adb` command below.
 adb shell am start -d "<your-link>" -a android.intent.action.VIEW
 ```
 
-You can find a complete example of how URLs work in the [Riztranslation extension](https://github.com/keiyoushi/extensions-source/tree/main/src/id/riztranslation).
+You can find a complete example of how URLs work in the [Riztranslation extension](https://github.com/eleanorlydie-wq/extensions-source-revived/tree/main/src/id/riztranslation).
 
 #### Update strategy
 
@@ -1010,7 +1010,7 @@ There are some cases where existing sources change their names on the website. T
 these changes in the extension, you need to explicitly set the `id` to the same old value, otherwise
 it will get changed by the new `name` value and users will be forced to migrate back to the source.
 
-To get the current `id` value before the name change, you can search the source name in the [repository JSON file](https://github.com/keiyoushi/extensions/blob/repo/index.json)
+To get the current `id` value before the name change, you can search the source name in the [repository JSON file](https://github.com/eleanorlydie-wq/extensions/blob/repo/index.json)
 by looking at the `sources` attribute of the extension. When you have the `id` copied, you can
 override it in the source:
 
