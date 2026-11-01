@@ -1,7 +1,7 @@
 ext {
     extName = 'Mango'
     extClass = '.Mango'
-    extVersionCode = 11
+    extVersionCode = 12
 }
 
 apply plugin: "kei.plugins.extension.legacy"

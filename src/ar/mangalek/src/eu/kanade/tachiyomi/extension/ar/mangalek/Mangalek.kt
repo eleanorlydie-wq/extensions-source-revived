@@ -37,7 +37,7 @@ internal val MIRROR_PREF_ENTRY_VALUES = arrayOf(
     "https://manga-leko.site",
 )
 private val MIRROR_PREF_DEFAULT_VALUE = MIRROR_PREF_ENTRY_VALUES[0]
-private const val RESTART_TACHIYOMI = ".لتطبيق الإعدادات الجديدة Tachiyomi أعد تشغيل"
+private const val RESTART_TACHIYOMI = ".لتطبيق الإعدادات الجديدة أعد تشغيل التطبيق"
 
 class Mangalek :
     Madara(

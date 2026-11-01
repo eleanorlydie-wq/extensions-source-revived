@@ -44,6 +44,6 @@ class FoolSlideCustomizable : FoolSlide("FoolSlide Customizable", "", "other") {
         private const val BASE_URL_PREF_TITLE = "Example URL: https://domain.com/path_to/directory/"
         private val BASE_URL_PREF = "overrideBaseUrl_v${AppInfo.getVersionName()}"
         private const val BASE_URL_PREF_SUMMARY = "Connect to a designated FoolSlide server"
-        private const val RESTART_TACHIYOMI = "Restart Tachiyomi to apply new setting."
+        private const val RESTART_TACHIYOMI = "Restart the app to apply new setting."
     }
 }

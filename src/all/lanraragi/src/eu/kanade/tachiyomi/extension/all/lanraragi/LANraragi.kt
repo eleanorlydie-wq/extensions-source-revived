@@ -311,7 +311,7 @@ open class LANraragi(private val suffix: String = "") :
                 setOnPreferenceChangeListener { _, newValue ->
                     try {
                         val setting = preferences.edit().putString(EXTRA_SOURCES_COUNT_KEY, newValue as String).commit()
-                        Toast.makeText(screen.context, "Restart Tachiyomi to apply new setting.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(screen.context, "Restart the app to apply new setting.", Toast.LENGTH_LONG).show()
                         setting
                     } catch (e: Exception) {
                         e.printStackTrace()
@@ -363,7 +363,7 @@ open class LANraragi(private val suffix: String = "") :
                     }
                 }
 
-                Toast.makeText(context, "Restart Tachiyomi to apply new setting.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Restart the app to apply new setting.", Toast.LENGTH_LONG).show()
                 res
             } catch (e: Exception) {
                 e.printStackTrace()
