@@ -5,6 +5,14 @@ import eu.kanade.tachiyomi.source.model.SManga
 import keiyoushi.utils.tryParse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.float
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -211,6 +219,29 @@ class DetailsDto(
         "HIATUS" -> SManga.ON_HIATUS
         "ABANDONED" -> SManga.CANCELLED
         else -> SManga.UNKNOWN
+    }
+}
+
+@Serializable
+class BookIndexDto(
+    private val fields: List<String>,
+    private val groups: List<ChapterDto.Group> = emptyList(),
+    private val books: List<List<JsonElement>>,
+) {
+    // The compact index declares its column order in fields. Pairs each book with its release time in seconds.
+    fun toBooks(): List<Pair<ChapterDto.Book, Long?>> = books.map { row ->
+        val values = fields.zip(row).toMap()
+        val book = ChapterDto.Book(
+            id = values.getValue("book_id").jsonPrimitive.content,
+            title = values["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            createdAt = null,
+            pagesCount = values["page_count"]?.jsonPrimitive?.intOrNull ?: 0,
+            number = values.getValue("sort_no").jsonPrimitive.float,
+            chapterNo = values["chapter_no"]?.jsonPrimitive?.contentOrNull,
+            volumeNo = values["volume_no"]?.jsonPrimitive?.contentOrNull,
+            groups = values["group_ix"]?.jsonArray.orEmpty().map { groups[it.jsonPrimitive.int] },
+        )
+        book to values["released_at"]?.jsonPrimitive?.longOrNull
     }
 }
 
