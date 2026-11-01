@@ -28,6 +28,7 @@ import okhttp3.Response
 import rx.Observable
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 class Nekopost : HttpSource() {
 
@@ -40,6 +41,16 @@ class Nekopost : HttpSource() {
     private val fileHost = "https://www.osemocphoto.com"
 
     private val dateFormat by lazy { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale("th")) }
+
+    private val isoDateFormat by lazy {
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ROOT).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+    }
+
+    private fun parseDate(date: String): Long = runCatching { isoDateFormat.parse(date)!!.time }
+        .recoverCatching { dateFormat.parse(date)!!.time }
+        .getOrDefault(0L)
 
     private val apiHeaders by lazy {
         headersBuilder()
@@ -260,7 +271,7 @@ class Nekopost : HttpSource() {
                 url = "$projectId/${it.chapterId}/${projectId}_${it.chapterId}.json"
                 name = it.chapterName
                 chapter_number = it.chapterNo.toFloat()
-                date_upload = dateFormat.parse(it.publishDate.value)?.time ?: 0L
+                date_upload = parseDate(it.publishDate.value)
                 scanlator = it.providerName
             }
         }
