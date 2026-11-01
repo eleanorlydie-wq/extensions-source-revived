@@ -2,8 +2,8 @@ ext {
     extName = 'Read Solo Leveling Manga Manhwa Online'
     extClass = '.ReadSoloLevelingMangaManhwaOnline'
     themePkg = 'mangacatalog'
-    baseUrl = 'https://ww3.readsololeveling.org'
-    overrideVersionCode = 3
+    baseUrl = 'https://ww4.readsololeveling.org'
+    overrideVersionCode = 4
     isNsfw = false
 }
 

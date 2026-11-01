@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.extension.en.readkingdommangaonline
 
 import eu.kanade.tachiyomi.multisrc.mangacatalog.MangaCatalog
 
-class ReadKingdomMangaOnline : MangaCatalog("Read Kingdom Manga Online", "https://ww5.readkingdom.com", "en") {
+class ReadKingdomMangaOnline : MangaCatalog("Read Kingdom Manga Online", "https://ww6.readkingdom.com", "en") {
     override val sourceList = listOf(
         Pair("Kingdom", "$baseUrl/manga/kingdom/"),
         Pair("Li Mu", "$baseUrl/manga/li-mu/"),
