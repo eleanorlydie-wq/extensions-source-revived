@@ -44,12 +44,12 @@ class KuraManga : HttpSource() {
         }
 
         val document = response.asJsoup()
-        val mangas = document.select(".popular-glide .manga-card").mapNotNull { element ->
-            val titleEl = element.selectFirst(".manga-title") ?: return@mapNotNull null
+        val mangas = document.select("section:has(h2:contains(Popular)) a.sp-card").mapNotNull { element ->
+            val titleEl = element.selectFirst(".sp-cap h3") ?: return@mapNotNull null
             SManga.create().apply {
                 title = titleEl.text()
                 url = "/" + element.attr("href").removePrefix("/")
-                thumbnail_url = element.selectFirst("img.manga-thumb")?.attr("abs:src")
+                thumbnail_url = element.selectFirst("img")?.attr("abs:src")
             }
         }
         return MangasPage(mangas, true)
@@ -122,10 +122,22 @@ class KuraManga : HttpSource() {
         return SManga.create().apply {
             title = document.selectFirst("h1.manga-title")!!.text()
             description = document.selectFirst(".summary-inner")?.text()
-            author = document.selectFirst(".meta-grid div:contains(Author:)")?.text()?.substringAfter("Author:")?.trim()
-            artist = document.selectFirst(".meta-grid div:contains(Artist:)")?.text()?.substringAfter("Artist:")?.trim()
+                ?: document.selectFirst(".mp-synopsis")?.text()
+            val storyAndArt = document.selectFirst(".mp-cred:has(.mp-cred-k:contains(Story & Art)) .mp-cred-v")?.text()
+                ?: document.selectFirst(".mp-cred:has(.mp-cred-k:contains(Author & Artist)) .mp-cred-v")?.text()
+            author = document.selectFirst(".mp-cred:has(.mp-cred-k:contains(Author)) .mp-cred-v")?.text()
+                ?: document.selectFirst(".mp-cred:has(.mp-cred-k:contains(Story)) .mp-cred-v")?.text()
+                ?: storyAndArt
+                ?: document.selectFirst(".meta-grid div:contains(Author:)")?.text()?.substringAfter("Author:")?.trim()
+            artist = document.selectFirst(".mp-cred:has(.mp-cred-k:contains(Artist)) .mp-cred-v")?.text()
+                ?: document.selectFirst(".mp-cred:has(.mp-cred-k:contains(Art)) .mp-cred-v")?.text()
+                ?: storyAndArt
+                ?: document.selectFirst(".meta-grid div:contains(Artist:)")?.text()?.substringAfter("Artist:")?.trim()
             genre = document.select(".genre-list a.genre-chip").joinToString { it.text() }
-            status = document.selectFirst(".meta-grid div:contains(Status:)")?.text()?.substringAfter("Status:")?.trim()?.lowercase().parseStatus()
+            status = (
+                document.selectFirst(".mp-status")?.text()
+                    ?: document.selectFirst(".meta-grid div:contains(Status:)")?.text()?.substringAfter("Status:")
+                )?.trim()?.lowercase().parseStatus()
             thumbnail_url = document.selectFirst("meta[property='og:image']")?.attr("content")
         }
     }
