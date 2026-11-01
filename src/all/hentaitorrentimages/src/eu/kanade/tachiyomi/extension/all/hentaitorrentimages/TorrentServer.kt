@@ -32,5 +32,5 @@ internal object TorrentServer {
         throw IOException(UPDATE_APP)
     }
 
-    private const val UPDATE_APP = "Reading torrents needs the app's torrent server: update the app to v0.18.1.36 or newer"
+    private const val UPDATE_APP = "Reading torrents needs a newer version of the app"
 }
