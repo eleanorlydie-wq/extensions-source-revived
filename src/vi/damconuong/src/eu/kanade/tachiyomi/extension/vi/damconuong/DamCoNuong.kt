@@ -22,7 +22,7 @@ import java.util.TimeZone
 class DamCoNuong : HttpSource() {
     override val name = "DamCoNuong"
     override val lang = "vi"
-    override val baseUrl = "https://damconuong.mom"
+    override val baseUrl = "https://damconuong.icu"
     override val supportsLatest = true
 
     override val client = network.client.newBuilder()
@@ -106,23 +106,20 @@ class DamCoNuong : HttpSource() {
         val document = response.asJsoup()
 
         return SManga.create().apply {
-            title = document.selectFirst("h1.text-xl.ml-1, h1.text-xl")!!.text()
+            title = document.selectFirst("h1.md-title, h1.text-xl")!!.text()
 
-            val imageElement = document.selectFirst("div.cover-frame img")
-            thumbnail_url = imageElement?.absUrl("src")
-                ?.ifEmpty { imageElement.absUrl("data-src") }
-                ?.ifEmpty { null }
+            thumbnail_url = document.selectFirst("meta[property=og:image]")?.attr("abs:content")?.ifEmpty { null }
 
-            author = document.selectFirst("span:containsOwn(Author:) + span a")?.text()
-            genre = document.select("#genres-list a")
+            author = document.selectFirst("div:has(> dt:containsOwn(Tác giả)) a")?.text()
+            genre = document.select(".md-rail-genres a")
                 .joinToString { it.text() }
                 .ifEmpty { null }
 
             status = parseStatus(
-                document.selectFirst("span:containsOwn(Tình trạng:)")?.parent()?.select("span")?.last()?.text(),
+                document.selectFirst("a.md-badge:has(.md-badge-dot)")?.text(),
             )
 
-            val descriptionElement = document.selectFirst("div.prose.dark\\:prose-invert.max-w-none")
+            val descriptionElement = document.selectFirst("div.md-synopsis > p")
             description = descriptionElement?.text()
                 ?.ifEmpty { null }
         }
@@ -139,12 +136,12 @@ class DamCoNuong : HttpSource() {
     override fun chapterListParse(response: Response): List<SChapter> {
         val document = response.asJsoup()
 
-        return document.select("#chapterList > a.block").map { element ->
+        return document.select("#md-chapter-list a.md-ch").map { element ->
             SChapter.create().apply {
                 setUrlWithoutDomain(element.absUrl("href"))
-                name = element.selectFirst("div.grow span")!!.text()
+                name = element.selectFirst(".md-ch-title")!!.text()
                 date_upload = parseChapterDate(
-                    element.selectFirst("span.ml-2.whitespace-nowrap")?.text(),
+                    element.selectFirst(".md-ch-meta > span:first-child")?.text(),
                 )
             }
         }
