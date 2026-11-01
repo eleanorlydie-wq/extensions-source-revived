@@ -24,7 +24,7 @@ class LunarAnime(override val lang: String, private val internalLang: String = l
 
     override val name = "Lunar Manga"
 
-    override val baseUrl = "https://lunaranime.ru"
+    override val baseUrl = "https://lunarx.to"
 
     override val supportsLatest = true
 
@@ -32,7 +32,7 @@ class LunarAnime(override val lang: String, private val internalLang: String = l
         .addInterceptor { chain ->
             val request = chain.request()
             val url = request.url.toString()
-            if (url.contains("storage.lunaranime.ru")) {
+            if (url.contains("vault.lunarx.to")) {
                 val newRequest = request.newBuilder()
                     .header("Referer", "$baseUrl/")
                     .build()
@@ -236,7 +236,7 @@ class LunarAnime(override val lang: String, private val internalLang: String = l
     private fun String.sha256(): ByteArray = MessageDigest.getInstance("SHA-256").digest(toByteArray())
 
     companion object {
-        private const val API_URL = "https://api.lunaranime.ru"
-        private const val CDN_URL = "https://storage.lunaranime.ru"
+        private const val API_URL = "https://api.lunarx.to"
+        private const val CDN_URL = "https://vault.lunarx.to"
     }
 }

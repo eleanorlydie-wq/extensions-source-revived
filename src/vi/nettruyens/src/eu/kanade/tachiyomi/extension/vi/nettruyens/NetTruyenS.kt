@@ -30,7 +30,7 @@ class NetTruyenS : HttpSource() {
 
     override val lang = "vi"
 
-    override val baseUrl = "https://nettruyen10s.com"
+    override val baseUrl = "https://nettruyen15s.com"
 
     override val supportsLatest = true
 
