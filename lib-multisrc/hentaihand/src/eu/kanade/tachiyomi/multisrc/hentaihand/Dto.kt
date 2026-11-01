@@ -42,9 +42,9 @@ typealias ChapterResponseDto = ChapterDto
 @Serializable
 class ChapterDto(
     private val slug: String,
-    private val name: String?,
-    private val added_at: String?,
-    private val updated_at: String?,
+    private val name: String? = null,
+    private val added_at: String? = null,
+    private val updated_at: String? = null,
 ) {
     companion object {
         private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd", Locale.US)
