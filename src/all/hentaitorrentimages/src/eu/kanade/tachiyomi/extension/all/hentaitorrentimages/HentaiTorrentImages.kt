@@ -127,6 +127,7 @@ class HentaiTorrentImages : HttpSource() {
         val cards = document.select("div.image-container div.image-wrapper")
         val checks = cards
             .filterNot { card -> card.selectFirst("div.catalog")?.text().orEmpty().let { cat -> SKIPPED_CATALOGS.any { cat.contains(it, true) } } }
+            .filterNot { card -> BLOCKED_CONTENT.containsMatchIn(card.text()) }
             .map { card -> card to checker.submit<Boolean> { isImagePost(card) } }
         val mangas = checks.filter { it.second.get() }.map { (card, _) ->
             SManga.create().apply {
@@ -307,6 +308,10 @@ class HentaiTorrentImages : HttpSource() {
     }
 
     private fun loadImageGroups(postPath: String, title: String): List<ImageGroup> {
+        // Hard-coded and not configurable. Covers titles and tags only, so untagged posts can get through.
+        val postText = client.newCall(GET(baseUrl + postPath, headers)).execute().use { it.asJsoup() }
+            .select("h1, div.catalog, div.article-content").text()
+        if (BLOCKED_CONTENT.containsMatchIn("$title $postText")) throw Exception("This title is blocked")
         val info = TorrentServer.info(torrentUrlFor(postPath), title)
         val images = info.files.filter { it.path.substringAfterLast('.', "").lowercase(Locale.ROOT) in IMAGE_EXTENSIONS }
         if (images.isEmpty()) throw Exception("This torrent has no images")
@@ -361,6 +366,8 @@ class HentaiTorrentImages : HttpSource() {
     }
 
     companion object {
+        private val BLOCKED_CONTENT = Regex("""\b(loli|lolis|lolicon|lolita|shota|shotas|shotacon|toddlercon|underage|shoujo kyouiku)\b""", RegexOption.IGNORE_CASE)
+
         private const val LOCALHOST = "127.0.0.1"
 
         private const val PAGE_SIZE = 60
