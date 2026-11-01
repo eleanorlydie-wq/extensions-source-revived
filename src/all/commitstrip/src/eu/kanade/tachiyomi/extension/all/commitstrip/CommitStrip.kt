@@ -55,8 +55,8 @@ abstract class CommitStrip(
     // Popular
 
     override fun fetchPopularManga(page: Int): Observable<MangasPage> {
-        // have one manga entry for each year
-        val mangas = (currentYear downTo 2012).map { createManga(it) }
+        // have one manga entry for each year that has strips
+        val mangas = (LAST_YEAR downTo 2012).filter { it !in EMPTY_YEARS }.map { createManga(it) }
         return Observable.just(MangasPage(mangas, false))
     }
 
@@ -83,6 +83,8 @@ abstract class CommitStrip(
 
     override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = Observable.fromCallable {
         val pages = client.newCall(GET(manga.url, headers)).execute().use { response ->
+            // Years without strips have no archive page.
+            if (response.code == 404) return@fromCallable emptyList()
             val responseString = response.asJsoup().selectFirst(".wp-pagenavi .pages")?.text() ?: "1"
             pageRegex.findAll(responseString).lastOrNull()?.value?.toInt() ?: 1
         }
@@ -135,6 +137,9 @@ abstract class CommitStrip(
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
 
     companion object {
+        private const val LAST_YEAR = 2024
+        private val EMPTY_YEARS = setOf(2023)
+
         private const val LOGO_EN = "https://i.imgur.com/HODJlt9.jpg"
         private const val LOGO_FR = "https://i.imgur.com/I7ps9zS.jpg"
         private const val AUTHOR_EN = "Mark Nightingale"
