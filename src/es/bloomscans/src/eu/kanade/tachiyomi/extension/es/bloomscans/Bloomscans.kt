@@ -47,6 +47,11 @@ class Bloomscans :
                 client.newCall(GET(bootstrapUrl, headers)).execute().close()
             }
         }
-        return super.pageListParse(document)
+        // Image URLs are site-relative here, and the app can't request those as they are.
+        return super.pageListParse(document).map { page ->
+            page.imageUrl?.takeIf { it.startsWith("/") }
+                ?.let { Page(page.index, page.url, "$baseUrl$it") }
+                ?: page
+        }
     }
 }
