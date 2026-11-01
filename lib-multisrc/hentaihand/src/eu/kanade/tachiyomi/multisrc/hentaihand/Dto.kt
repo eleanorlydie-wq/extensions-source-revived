@@ -45,6 +45,7 @@ class ChapterDto(
     private val name: String? = null,
     private val added_at: String? = null,
     private val updated_at: String? = null,
+    private val uploaded_at: String? = null,
 ) {
     companion object {
         private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -69,7 +70,7 @@ class ChapterDto(
     fun toSChapter() = SChapter.create().also { chapter ->
         chapter.url = slug
         chapter.name = "Chapter"
-        chapter.date_upload = parseDate(updated_at)
+        chapter.date_upload = parseDate(updated_at ?: uploaded_at)
         chapter.chapter_number = 1f
     }
 }
