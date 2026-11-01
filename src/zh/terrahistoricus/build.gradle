@@ -1,7 +1,7 @@
 ext {
     extName = 'Terra Historicus'
     extClass = '.TerraHistoricus'
-    extVersionCode = 4
+    extVersionCode = 5
 }
 
 apply plugin: "kei.plugins.extension.legacy"
