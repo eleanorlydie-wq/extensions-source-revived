@@ -8,6 +8,7 @@ class Manganato :
     MangaBox(
         "Manganato",
         arrayOf(
+            "www.manganami.com",
             "www.natomanga.com",
             "www.nelomanga.com",
             "www.nelomanga.net",

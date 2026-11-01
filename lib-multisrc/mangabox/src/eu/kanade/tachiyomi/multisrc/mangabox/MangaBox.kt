@@ -327,8 +327,8 @@ abstract class MangaBox(
 
     private fun mangaFromElement(element: Element, urlSelector: String = "h3 a"): SManga = SManga.create().apply {
         val urlElement = element.selectFirst(urlSelector)!!
-        url = urlElement.attr("abs:href")
-            .substringAfter(baseUrl) // intentionally not using setUrlWithoutDomain
+        // Listing links can point at a newer domain than the selected mirror, so keep only the path.
+        setUrlWithoutDomain(urlElement.attr("abs:href"))
         title = urlElement.text()
         thumbnail_url = element.selectFirst("img")!!.attr("abs:src")
     }
