@@ -37,6 +37,10 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.concurrent.locks.ReentrantLock
 import java.util.zip.GZIPInputStream
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import kotlin.io.encoding.Base64
 import kotlin.random.Random
 
 abstract class MangaHub(
@@ -100,8 +104,8 @@ abstract class MangaHub(
             .build()
     }
 
-    // Normally this gets handled properly but in older forks such as TachiyomiJ2K, we have to manually intercept it
-    // as they have an outdated implementation of NetworkHelper.
+    // Normally this gets handled properly but older app versions have an outdated implementation
+    // of NetworkHelper, so we have to manually intercept it.
     private fun compatEncodingInterceptor(chain: Interceptor.Chain): Response {
         var response = chain.proceed(chain.request())
         val contentEncoding = response.header("Content-Encoding")
@@ -396,7 +400,7 @@ abstract class MangaHub(
 
     override fun pageListParse(response: Response): List<Page> {
         val chapterObject = response.parseAs<ApiChapterPagesResponse>()
-        val pages = chapterObject.data.chapter.pages.parseAs<ApiChapterPages>()
+        val pages = decryptPages(chapterObject.data.chapter.pages).parseAs<ApiChapterPages>()
 
         // We'll update the cookie here to match the browser's "recently" opened chapter.
         // This mimics how the browser works and gives us more chance to receive a valid API key upon refresh
@@ -413,22 +417,73 @@ abstract class MangaHub(
             .domain(baseHttpUrl.host)
             .name("recently")
             .value(URLEncoder.encode(recently, "utf-8"))
-            .expiresAt(now + 2 * 60 * 60 * 24 * 31) // +2 months
+            .expiresAt(now + 2L * 31 * 24 * 60 * 60 * 1000) // +2 months
             .build()
 
         // Add/update the cookie
         client.cookieJar.saveFromResponse(baseHttpUrl, listOf(recentlyCookie))
 
-        // We'll log our action to the site to further increase the chance of valid API key
-        val ipRequest = client.newCall(GET("https://api.ipify.org?format=json")).execute()
-        val ip = ipRequest.parseAs<PublicIPResponse>().ip
-
-        client.newCall(GET("$baseUrl/action/logHistory2/${chapterObject.data.chapter.manga.slug}/${chapterObject.data.chapter.chapterNumber}?browserID=$ip")).execute().close()
-        ipRequest.close()
+        // We'll log our action to the site to further increase the chance of valid API key.
+        // Reading doesn't depend on it, so it mustn't fail the chapter.
+        runCatching {
+            val ip = publicIp ?: client.newCall(GET("https://api.ipify.org?format=json")).execute()
+                .parseAs<PublicIPResponse>().ip.also { publicIp = it }
+            client.newCall(GET("$baseUrl/action/logHistory2/${chapterObject.data.chapter.manga.slug}/${chapterObject.data.chapter.chapterNumber}?browserID=$ip")).execute().close()
+        }
 
         return pages.images.mapIndexed { i, page ->
             Page(i, "", "$baseCdnUrl/${pages.page}$page")
         }
+    }
+
+    private var publicIp: String? = null
+
+    /**
+     * Chapter page lists now come as "enc:v1:<keyId>:<iv>:<authTag>:<ciphertext>" (base64url,
+     * AES-256-GCM). The reader gets the key from the site with the same session token as the API.
+     */
+    private fun decryptPages(pages: String): String {
+        if (!pages.startsWith(ENCRYPTED_PREFIX)) return pages
+        val parts = pages.split(':')
+        if (parts.size != 6) throw IOException("Unknown page list format")
+        val (keyId, iv, tag, data) = parts.drop(2)
+        val key = chapterKey(keyId)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv.decodeBase64Url()))
+        return cipher.doFinal(data.decodeBase64Url() + tag.decodeBase64Url()).toString(Charsets.UTF_8)
+    }
+
+    private fun String.decodeBase64Url() = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL).decode(this)
+
+    private class ChapterKey(val id: String, val key: ByteArray, val expiresAt: Long)
+
+    private var chapterKey: ChapterKey? = null
+
+    @Synchronized
+    private fun chapterKey(keyId: String): ByteArray {
+        chapterKey?.takeIf { it.id == keyId && it.expiresAt > System.currentTimeMillis() }?.let { return it.key }
+        val access = client.cookieJar.loadForRequest(baseUrl.toHttpUrl())
+            .firstOrNull { it.name == "mhub_access" && it.value.isNotEmpty() }?.value
+            ?: throw MangaHubCookieNotFound()
+        val request = GET(
+            "$baseUrl/api/chapter-crypto",
+            headersBuilder()
+                .set("Accept", "application/json")
+                .set("x-mhub-access", access)
+                .set("Sec-Fetch-Dest", "empty")
+                .set("Sec-Fetch-Mode", "cors")
+                .removeAll("Upgrade-Insecure-Requests")
+                .build(),
+        )
+        val response = client.newCall(request).execute().use {
+            if (!it.isSuccessful) throw IOException("Couldn't get the chapter key (HTTP ${it.code})")
+            it.parseAs<ApiChapterCrypto>()
+        }
+        if (response.keyId != keyId) throw IOException("The chapter key changed, try again")
+        val key = response.key.decodeBase64Url()
+        val expiresAt = (response.expiresAt ?: (System.currentTimeMillis() + CHAPTER_KEY_LIFETIME)) - CHAPTER_KEY_MARGIN
+        chapterKey = ChapterKey(response.keyId, key, expiresAt)
+        return key
     }
 
     // Image
@@ -590,5 +645,9 @@ abstract class MangaHub(
 
     companion object {
         private const val PREF_USE_GENERIC_TITLE = "pref_use_generic_title"
+
+        private const val ENCRYPTED_PREFIX = "enc:v1:"
+        private const val CHAPTER_KEY_LIFETIME = 5 * 60 * 1000L
+        private const val CHAPTER_KEY_MARGIN = 30 * 1000L
     }
 }
