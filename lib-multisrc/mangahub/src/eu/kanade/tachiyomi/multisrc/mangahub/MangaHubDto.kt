@@ -28,6 +28,13 @@ class PublicIPResponse(
     val ip: String,
 )
 
+@Serializable
+class ApiChapterCrypto(
+    val keyId: String,
+    val key: String,
+    val expiresAt: Long? = null,
+)
+
 // Chapter metadata (pages)
 @Serializable
 class ApiChapterData(
