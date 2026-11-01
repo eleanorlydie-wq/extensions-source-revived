@@ -1,0 +1,10 @@
+ext {
+    extName = 'Aster Scans'
+    extClass = '.AsterScans'
+    themePkg = 'mangathemesia'
+    baseUrl = 'https://asterscans.com'
+    overrideVersionCode = 0
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
