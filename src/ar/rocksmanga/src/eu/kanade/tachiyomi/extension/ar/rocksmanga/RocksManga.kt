@@ -4,6 +4,7 @@ import eu.kanade.tachiyomi.multisrc.madara.Madara
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.source.model.Filter
 import eu.kanade.tachiyomi.source.model.FilterList
+import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -11,6 +12,7 @@ import okhttp3.Request
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 
 class RocksManga :
@@ -29,16 +31,15 @@ class RocksManga :
     override fun searchMangaFromElement(element: Element): SManga = popularMangaFromElement(element)
 
     override val mangaDetailsSelectorTitle = ".info h1"
-    override val mangaDetailsSelectorAuthor = "div.meta span:contains(المؤلف:) + a"
-    override val mangaDetailsSelectorArtist = "div.meta span:contains(الرسام:) + a"
+    override val mangaDetailsSelectorAuthor = "div.meta div:has(.meta-label:contains(المؤلف)) a"
+    override val mangaDetailsSelectorArtist = "div.meta div:has(.meta-label:contains(الرسام)) a"
     override val mangaDetailsSelectorStatus = ".info p"
     override val mangaDetailsSelectorDescription = "div.description"
-    override val mangaDetailsSelectorThumbnail = ".manga-poster img"
-    override val mangaDetailsSelectorGenre = "div.meta span:contains(التصنيفات:) ~ a"
+    override val mangaDetailsSelectorThumbnail = ".poster img"
+    override val mangaDetailsSelectorGenre = "div.meta div:has(.meta-label:contains(التصنيفات)) a"
     override val altNameSelector = ".info h6"
-    override fun chapterListSelector() = "div.list-body-hh ul li"
-    override fun chapterDateSelector() = "span.time"
-    override val pageListParseSelector = "#ch-images .img"
+    override fun chapterListSelector() = "div.list-body ul li.item"
+    override fun chapterDateSelector() = "span.chapter-row-meta > span:last-child"
     override val chapterUrlSuffix = ""
 
     override val useLoadMoreRequest = LoadMoreStrategy.Never
@@ -122,8 +123,36 @@ class RocksManga :
 
     override fun chapterFromElement(element: Element): SChapter {
         val chapter = super.chapterFromElement(element)
-        chapter.name = element.selectFirst("zebi")!!.text()
-        chapter.scanlator = element.selectFirst(".username span")?.text()
+        element.selectFirst(".chapter-title-text")?.text()?.let { chapter.name = it }
+        chapter.scanlator = element.selectFirst(".chapter-row-uploader")?.text()
         return chapter
     }
+
+    override fun parseChapterDate(date: String?): Long {
+        val text = date ?: return 0L
+        val number = NUMBER_REGEX.find(text)?.value?.toIntOrNull() ?: 1
+        val calendar = Calendar.getInstance()
+        when {
+            "دقيق" in text || "دقائق" in text -> calendar.add(Calendar.MINUTE, -number)
+            "ساع" in text -> calendar.add(Calendar.HOUR, -number)
+            "يوم" in text || "أيام" in text -> calendar.add(Calendar.DAY_OF_MONTH, -number)
+            "أسبوع" in text || "أسابيع" in text -> calendar.add(Calendar.DAY_OF_MONTH, -number * 7)
+            "شهر" in text || "أشهر" in text -> calendar.add(Calendar.MONTH, -number)
+            "سنة" in text || "سنوات" in text -> calendar.add(Calendar.YEAR, -number)
+            else -> return super.parseChapterDate(text)
+        }
+        return calendar.timeInMillis
+    }
+
+    // Only the first images are rendered; the full list is in the page's Next.js payload.
+    override fun pageListParse(document: Document): List<Page> {
+        val pages = PAGES_REGEX.find(document.html())?.groupValues?.get(1).orEmpty()
+        return PATH_REGEX.findAll(pages).mapIndexed { index, match ->
+            Page(index, document.location(), "https://api.rocksmanga.com${match.groupValues[1]}")
+        }.toList()
+    }
 }
+
+private val NUMBER_REGEX = Regex("""\d+""")
+private val PAGES_REGEX = Regex("""\\"pages\\":\[(.*?)]""")
+private val PATH_REGEX = Regex("""\\"(/[^"\\]+)\\"""")
