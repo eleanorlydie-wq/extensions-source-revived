@@ -421,15 +421,13 @@ abstract class GroupLe(
 
         var i = 0
         while (m.find()) {
-            val urlParts = m.group().replace(QUOTES_REGEX, "").split(',')
-            var url = if (urlParts[1].isEmpty() && urlParts[2].startsWith("/static/")) {
-                baseUrl + urlParts[2]
-            } else {
-                if (urlParts[1].endsWith("/manga/")) {
-                    urlParts[0] + urlParts[2]
-                } else {
-                    urlParts[1] + urlParts[0] + urlParts[2]
-                }
+            val host = m.group(1)!!
+            val prefix = m.group(2)!!
+            val path = m.group(3)!!
+            var url = when {
+                prefix.isEmpty() && path.startsWith("/static/") -> baseUrl + path
+                prefix.endsWith("/manga/") -> host + path
+                else -> prefix + host + path
             }
             if (!url.contains("://")) {
                 url = "https:$url"
@@ -485,7 +483,9 @@ abstract class GroupLe(
         private val USER_HASH_REGEX = "user_hash.+'(.+)'".toRegex()
         private val EXTRA_REGEX = Regex("""\s*([0-9]+\sЭкстра)\s*""")
         private val SINGLE_REGEX = Regex("""\s*Сингл\s*""")
-        private val PAGES_PATTERN: Pattern = Pattern.compile("'.*?','.*?',\".*?\"")
-        private val QUOTES_REGEX = "[\"\']+".toRegex()
+
+        // One page is ['host','prefix',"path",width,height,'']. Anchored on "[" because the quoted
+        // field that ends each entry would otherwise be taken as the start of the next one.
+        private val PAGES_PATTERN: Pattern = Pattern.compile("""\[\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*"([^"]*)"""")
     }
 }
