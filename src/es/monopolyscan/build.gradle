@@ -1,0 +1,10 @@
+ext {
+    extName = 'Monopoly Scan'
+    extClass = '.MonopolyScan'
+    themePkg = 'madara'
+    baseUrl = 'https://monopolymanhua.com'
+    overrideVersionCode = 1
+    isNsfw = false
+}
+
+apply plugin: "kei.plugins.extension.legacy"
