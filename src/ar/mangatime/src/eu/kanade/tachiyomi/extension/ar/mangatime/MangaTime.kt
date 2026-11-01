@@ -18,6 +18,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.internal.closeQuietly
+import rx.Observable
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -133,9 +134,10 @@ class MangaTime : HttpSource() {
 
         return result.chapters.map {
             SChapter.create().apply {
-                chapter_number = it.number.toFloat()
-                name = it.title
-                setUrlWithoutDomain("/chapter/${it.number}")
+                val number = it.number.toString().removeSuffix(".0")
+                chapter_number = it.number
+                name = it.title ?: "الفصل $number"
+                setUrlWithoutDomain("/chapter/$number")
                 date_upload = dateFormat.tryParse(it.publishedAt)
             }
         }
@@ -148,7 +150,7 @@ class MangaTime : HttpSource() {
     override fun pageListRequest(chapter: SChapter): Request {
         val chapterUrl = getChapterUrl(chapter).toHttpUrl()
         val seriesSlug = chapterUrl.pathSegments[1]
-        val chapterNumber = chapterUrl.pathSegments[3].toInt()
+        val chapterNumber = chapterUrl.pathSegments[3].toFloat()
 
         return GET(trpcUrl("content.getChapterPages", PagesQuery(seriesSlug, chapterNumber).trpcJson()), headers)
     }
@@ -167,7 +169,7 @@ class MangaTime : HttpSource() {
 
     override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
 
-    override fun prepareNewChapter(chapter: SChapter, manga: SManga) {
-        chapter.url = manga.url.substringBefore("#") + chapter.url
+    override fun fetchChapterList(manga: SManga): Observable<List<SChapter>> = super.fetchChapterList(manga).map { chapters ->
+        chapters.onEach { it.url = manga.url.substringBefore("#") + it.url }
     }
 }
