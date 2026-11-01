@@ -16,6 +16,7 @@ class Hizomanga :
 
     override val useLoadMoreRequest = LoadMoreStrategy.Always
 
+    override val mangaDetailsSelectorTitle = ".manga-title h2"
     override val mangaDetailsSelectorDescription = ".manga-excerpt"
     override val mangaDetailsSelectorStatus = ".manga-status"
 }

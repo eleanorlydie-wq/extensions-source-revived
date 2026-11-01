@@ -3,7 +3,7 @@ ext {
 	extClass = '.Hizomanga'
 	themePkg = 'madara'
 	baseUrl = 'https://hizomanga.net'
-	overrideVersionCode = 0
+	overrideVersionCode = 1
 	isNsfw = false
 }
 
