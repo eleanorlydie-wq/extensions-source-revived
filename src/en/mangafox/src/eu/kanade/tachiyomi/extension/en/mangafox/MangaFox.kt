@@ -122,6 +122,7 @@ class MangaFox : HttpSource() {
         val url = baseUrl.toHttpUrl().newBuilder().apply {
             addPathSegment("search")
             addQueryParameter("title", query)
+            addQueryParameter("page", page.toString())
             (if (filters.isEmpty()) getFilterList() else filters).forEach { filter ->
                 when (filter) {
                     is UriPartFilter -> addQueryParameter(filter.query, filter.toUriPart())
