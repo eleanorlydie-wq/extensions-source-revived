@@ -3,7 +3,7 @@ ext {
     extClass = '.ComicVerse'
     themePkg = 'zeistmanga'
     baseUrl = 'https://arcomixverse.blogspot.com'
-    overrideVersionCode = 2
+    overrideVersionCode = 3
     isNsfw = false
 }
 
