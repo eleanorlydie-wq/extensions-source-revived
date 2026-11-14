@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.SharedPreferences
 import android.net.Uri
 import androidx.preference.CheckBoxPreference
+import androidx.preference.EditTextPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.asObservableSuccess
@@ -179,7 +180,8 @@ abstract class EHentai(
     private fun languageTag(enforceLanguageFilter: Boolean = false): String = if (enforceLanguageFilter || getEnforceLanguagePref()) "language:$ehLang" else ""
 
     override fun popularMangaRequest(page: Int) = if (isLangNatural()) {
-        exGet("$baseUrl/?f_search=${languageTag()}&f_srdd=5&f_sr=on", page)
+        val search = (listOf(languageTag()) + savedDefaultTags()).filter { it.isNotEmpty() }.joinToString(",")
+        exGet("$baseUrl/?f_search=${URLEncoder.encode(search, "UTF-8")}&f_srdd=5&f_sr=on", page)
     } else {
         latestUpdatesRequest(page)
     }
@@ -203,11 +205,9 @@ abstract class EHentai(
                     filters.filterIsInstance<OtherTagFilter>().flatMap { it.qualifiedTags() }
                 ).distinct()
         // Remember how often each tag is searched so frequent ones are proposed first next time.
-        recordTagUsage(typedTags)
-        modifiedQuery +=
-            typedTags
-                .joinToString(",")
-                .let { if (it.isNotEmpty()) ",$it" else it }
+        // Pre-filled saved defaults are left out so they don't crowd the ranking.
+        recordTagUsage(typedTags - savedDefaultTags().toSet())
+        modifiedQuery = (listOf(modifiedQuery) + typedTags).filter { it.isNotBlank() }.joinToString(",")
         uri.appendQueryParameter("f_search", modifiedQuery)
         // when attempting to search with no genres selected, will auto select all genres
         filters.filterIsInstance<GenreGroup>().firstOrNull()?.state?.let {
@@ -232,7 +232,15 @@ abstract class EHentai(
         return exGet(uri.toString(), page)
     }
 
-    override fun latestUpdatesRequest(page: Int) = exGet(baseUrl, page)
+    override fun latestUpdatesRequest(page: Int): Request {
+        // Saved default tags filter Latest too; the plain front page is used when there are none.
+        val search = savedDefaultTags().joinToString(",")
+        return if (search.isEmpty()) {
+            exGet(baseUrl, page)
+        } else {
+            exGet("$baseUrl/?f_search=${URLEncoder.encode(search, "UTF-8")}", page)
+        }
+    }
 
     override fun popularMangaParse(response: Response) = genericMangaParse(response)
 
@@ -486,10 +494,10 @@ abstract class EHentai(
         Watched(),
         GenreGroup(),
         Filter.Header("Tags — separate with , or ;  ·  prefix - to exclude"),
-        FemaleTagFilter(namespaceSuggestions("female")),
-        MaleTagFilter(namespaceSuggestions("male")),
-        MixedTagFilter(namespaceSuggestions("mixed")),
-        OtherTagFilter(otherSuggestions()),
+        FemaleTagFilter(namespaceSuggestions("female"), savedDefault("female")),
+        MaleTagFilter(namespaceSuggestions("male"), savedDefault("male")),
+        MixedTagFilter(namespaceSuggestions("mixed"), savedDefault("mixed")),
+        OtherTagFilter(otherSuggestions(), savedDefault("other")),
         AdvancedGroup(),
     )
 
@@ -519,9 +527,11 @@ abstract class EHentai(
         name: String,
         private val namespace: String,
         suggestions: List<String>,
+        state: String = "",
     ) : Filter.AutoComplete(
         name = name,
         hint = "e.g. big breasts, sole female; -guro",
+        state = state,
         suggestions = suggestions,
     ) {
         // Turn the bare input into fully-qualified "namespace:tag" tokens, preserving "-" exclusions.
@@ -540,19 +550,21 @@ abstract class EHentai(
             .distinct()
     }
 
-    class FemaleTagFilter(suggestions: List<String>) : NamespaceTagFilter("Female tags", "female", suggestions)
+    class FemaleTagFilter(suggestions: List<String>, state: String = "") : NamespaceTagFilter("Female tags", "female", suggestions, state)
 
-    class MaleTagFilter(suggestions: List<String>) : NamespaceTagFilter("Male tags", "male", suggestions)
+    class MaleTagFilter(suggestions: List<String>, state: String = "") : NamespaceTagFilter("Male tags", "male", suggestions, state)
 
-    class MixedTagFilter(suggestions: List<String>) : NamespaceTagFilter("Mixed tags", "mixed", suggestions)
+    class MixedTagFilter(suggestions: List<String>, state: String = "") : NamespaceTagFilter("Mixed tags", "mixed", suggestions, state)
 
     // General box for anything without a dedicated namespace box (parody:, artist:, language:, …).
     // Typed with full prefixes; the hint shows greyed-out examples.
     class OtherTagFilter(
         suggestions: List<String>,
+        state: String = "",
     ) : Filter.AutoComplete(
         name = "Other tags",
         hint = "e.g. parody:naruto, artist:rei, language:english; -guro",
+        state = state,
         suggestions = suggestions,
     ) {
         fun qualifiedTags(): List<String> = state
@@ -714,6 +726,9 @@ abstract class EHentai(
         // Personalized tag-frequency tracking
         private const val TAG_USAGE_PREF_KEY = "TAG_USAGE"
 
+        private const val DEFAULT_TAGS_PREF_KEY = "DEFAULT_TAGS"
+        private val DEFAULT_TAG_BOXES = listOf("female" to "Female", "male" to "Male", "mixed" to "Mixed", "other" to "Other")
+
         // Cap stored tags so the preference can't grow without bound; keep the most-used ones.
         private const val TAG_USAGE_MAX_ENTRIES = 300
     }
@@ -734,7 +749,41 @@ abstract class EHentai(
                 }
             }
         screen.addPreference(enforceLanguagePref)
+
+        DEFAULT_TAG_BOXES.forEach { (box, label) ->
+            EditTextPreference(screen.context).apply {
+                key = defaultTagsPrefKey(box)
+                title = "Default $label tags"
+                dialogTitle = "Default $label tags"
+                dialogMessage = "Pre-filled in the $label tags box and applied to Popular and Latest. " +
+                    "Separate with , or ;  ·  prefix - to exclude" +
+                    if (box == "other") " (use full prefixes, e.g. -yaoi, parody:naruto)." else " (e.g. ahegao; -guro)."
+                summary = savedDefault(box).ifBlank { "None" }
+                setDefaultValue("")
+                setOnPreferenceChangeListener { pref, newValue ->
+                    pref.summary = (newValue as String).trim().ifBlank { "None" }
+                    true
+                }
+            }.also(screen::addPreference)
+        }
     }
+
+    // region Saved default tags
+    // Per-box tags the user always wants (e.g. Other "-yaoi", Female "ahegao"). They pre-fill the
+    // filter boxes, so they show and can be removed for one search, and also filter Popular/Latest.
+
+    private fun defaultTagsPrefKey(box: String) = "${DEFAULT_TAGS_PREF_KEY}_${box}_$lang"
+
+    private fun savedDefault(box: String): String = preferences.getString(defaultTagsPrefKey(box), "").orEmpty().trim()
+
+    // All saved defaults as fully-qualified search tokens, qualified exactly like the filter boxes do.
+    private fun savedDefaultTags(): List<String> = (
+        FemaleTagFilter(emptyList(), savedDefault("female")).qualifiedTags() +
+            MaleTagFilter(emptyList(), savedDefault("male")).qualifiedTags() +
+            MixedTagFilter(emptyList(), savedDefault("mixed")).qualifiedTags() +
+            OtherTagFilter(emptyList(), savedDefault("other")).qualifiedTags()
+        ).distinct()
+    // endregion
 
     private fun getEnforceLanguagePref(): Boolean = preferences.getBoolean("${ENFORCE_LANGUAGE_PREF_KEY}_$lang", ENFORCE_LANGUAGE_PREF_DEFAULT_VALUE)
 
