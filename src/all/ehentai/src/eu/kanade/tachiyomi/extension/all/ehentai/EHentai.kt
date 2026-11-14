@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
+import androidx.preference.MultiSelectListPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.asObservableSuccess
@@ -181,7 +182,7 @@ abstract class EHentai(
 
     override fun popularMangaRequest(page: Int) = if (isLangNatural()) {
         val search = (listOf(languageTag()) + savedDefaultTags()).filter { it.isNotEmpty() }.joinToString(",")
-        exGet("$baseUrl/?f_search=${URLEncoder.encode(search, "UTF-8")}&f_srdd=5&f_sr=on", page)
+        exGet("$baseUrl/?f_search=${URLEncoder.encode(search, "UTF-8")}&f_srdd=5&f_sr=on${savedCategoriesParam()}", page)
     } else {
         latestUpdatesRequest(page)
     }
@@ -201,8 +202,8 @@ abstract class EHentai(
             }
         val typedTags =
             (
-                filters.filterIsInstance<NamespaceTagFilter>().flatMap { it.qualifiedTags() } +
-                    filters.filterIsInstance<OtherTagFilter>().flatMap { it.qualifiedTags() }
+                filters.filterIsInstance<NamespaceTagFilter>().flatMap { it.qualifiedTags(currentInput(it.builtWith, it.state, savedDefault(it.namespace))) } +
+                    filters.filterIsInstance<OtherTagFilter>().flatMap { it.qualifiedTags(currentInput(it.builtWith, it.state, savedDefault("other"))) }
                 ).distinct()
         // Remember how often each tag is searched so frequent ones are proposed first next time.
         // Pre-filled saved defaults are left out so they don't crowd the ranking.
@@ -210,6 +211,14 @@ abstract class EHentai(
         modifiedQuery = (listOf(modifiedQuery) + typedTags).filter { it.isNotBlank() }.joinToString(",")
         uri.appendQueryParameter("f_search", modifiedQuery)
         // when attempting to search with no genres selected, will auto select all genres
+        filters.filterIsInstance<GenreGroup>().firstOrNull()?.let { group ->
+            // A sheet built before the saved categories changed, left untouched, takes the new ones.
+            val selected = group.state.filter { it.state }.map { it.genreId }.toSet()
+            val saved = savedCategories()
+            if (selected == group.builtWith && saved != group.builtWith) {
+                group.state.forEach { it.state = it.genreId in saved }
+            }
+        }
         filters.filterIsInstance<GenreGroup>().firstOrNull()?.state?.let {
             // variable to to check is any genres are selected
             val check = it.any { option -> option.state } // or it.any(GenreOption::state)
@@ -233,12 +242,13 @@ abstract class EHentai(
     }
 
     override fun latestUpdatesRequest(page: Int): Request {
-        // Saved default tags filter Latest too; the plain front page is used when there are none.
+        // Saved default tags and categories filter Latest too; the plain front page is used when there are none.
         val search = savedDefaultTags().joinToString(",")
-        return if (search.isEmpty()) {
+        val categories = savedCategoriesParam()
+        return if (search.isEmpty() && categories.isEmpty()) {
             exGet(baseUrl, page)
         } else {
-            exGet("$baseUrl/?f_search=${URLEncoder.encode(search, "UTF-8")}", page)
+            exGet("$baseUrl/?f_search=${URLEncoder.encode(search, "UTF-8")}$categories", page)
         }
     }
 
@@ -492,7 +502,7 @@ abstract class EHentai(
     override fun getFilterList() = FilterList(
         EnforceLanguageFilter(getEnforceLanguagePref()),
         Watched(),
-        GenreGroup(),
+        GenreGroup(savedCategories()),
         Filter.Header("Tags — separate with , or ;  ·  prefix - to exclude"),
         FemaleTagFilter(namespaceSuggestions("female"), savedDefault("female")),
         MaleTagFilter(namespaceSuggestions("male"), savedDefault("male")),
@@ -525,7 +535,7 @@ abstract class EHentai(
     // (e.g. "big breasts, -guro") and the namespace is added automatically.
     abstract class NamespaceTagFilter(
         name: String,
-        private val namespace: String,
+        val namespace: String,
         suggestions: List<String>,
         state: String = "",
     ) : Filter.AutoComplete(
@@ -534,8 +544,11 @@ abstract class EHentai(
         state = state,
         suggestions = suggestions,
     ) {
+        // The saved default this box was pre-filled with, to spot a sheet built before it changed.
+        val builtWith = state
+
         // Turn the bare input into fully-qualified "namespace:tag" tokens, preserving "-" exclusions.
-        fun qualifiedTags(): List<String> = state
+        fun qualifiedTags(input: String = state): List<String> = input
             .split(',', ';')
             .map { it.trim() }
             .filter { it.isNotEmpty() }
@@ -567,7 +580,9 @@ abstract class EHentai(
         state = state,
         suggestions = suggestions,
     ) {
-        fun qualifiedTags(): List<String> = state
+        val builtWith = state
+
+        fun qualifiedTags(input: String = state): List<String> = input
             .split(',', ';')
             .map { it.trim() }
             .filter { it.isNotEmpty() }
@@ -586,29 +601,19 @@ abstract class EHentai(
 
     class GenreOption(
         name: String,
-        private val genreId: String,
-    ) : CheckBox(name, false),
+        val genreId: String,
+        state: Boolean = false,
+    ) : CheckBox(name, state),
         UriFilter {
         override fun addToUri(builder: Uri.Builder) {
             builder.appendQueryParameter("f_$genreId", if (state) "1" else "0")
         }
     }
 
-    class GenreGroup :
+    class GenreGroup(val builtWith: Set<String> = emptySet()) :
         UriGroup<GenreOption>(
             "Genres",
-            listOf(
-                GenreOption("Dōjinshi", "doujinshi"),
-                GenreOption("Manga", "manga"),
-                GenreOption("Artist CG", "artistcg"),
-                GenreOption("Game CG", "gamecg"),
-                GenreOption("Western", "western"),
-                GenreOption("Non-H", "non-h"),
-                GenreOption("Image Set", "imageset"),
-                GenreOption("Cosplay", "cosplay"),
-                GenreOption("Asian Porn", "asianporn"),
-                GenreOption("Misc", "misc"),
-            ),
+            GENRES.map { (name, id) -> GenreOption(name, id, id in builtWith) },
         )
 
     class AdvancedOption(
@@ -727,6 +732,33 @@ abstract class EHentai(
         private const val TAG_USAGE_PREF_KEY = "TAG_USAGE"
 
         private const val DEFAULT_TAGS_PREF_KEY = "DEFAULT_TAGS"
+        private const val DEFAULT_CATEGORIES_PREF_KEY = "DEFAULT_CATEGORIES"
+
+        private val GENRES = listOf(
+            "Dōjinshi" to "doujinshi",
+            "Manga" to "manga",
+            "Artist CG" to "artistcg",
+            "Game CG" to "gamecg",
+            "Western" to "western",
+            "Non-H" to "non-h",
+            "Image Set" to "imageset",
+            "Cosplay" to "cosplay",
+            "Asian Porn" to "asianporn",
+            "Misc" to "misc",
+        )
+
+        private val CATEGORY_BITS = mapOf(
+            "misc" to 1,
+            "doujinshi" to 2,
+            "manga" to 4,
+            "artistcg" to 8,
+            "gamecg" to 16,
+            "imageset" to 32,
+            "cosplay" to 64,
+            "asianporn" to 128,
+            "non-h" to 256,
+            "western" to 512,
+        )
         private val DEFAULT_TAG_BOXES = listOf("female" to "Female", "male" to "Male", "mixed" to "Mixed", "other" to "Other")
 
         // Cap stored tags so the preference can't grow without bound; keep the most-used ones.
@@ -749,6 +781,21 @@ abstract class EHentai(
                 }
             }
         screen.addPreference(enforceLanguagePref)
+
+        MultiSelectListPreference(screen.context).apply {
+            key = defaultCategoriesPrefKey()
+            title = "Default categories"
+            dialogTitle = "Default categories"
+            entries = GENRES.map { it.first }.toTypedArray()
+            entryValues = GENRES.map { it.second }.toTypedArray()
+            setDefaultValue(emptySet<String>())
+            summary = categoriesSummary(savedCategories())
+            setOnPreferenceChangeListener { pref, newValue ->
+                @Suppress("UNCHECKED_CAST")
+                pref.summary = categoriesSummary(newValue as Set<String>)
+                true
+            }
+        }.also(screen::addPreference)
 
         DEFAULT_TAG_BOXES.forEach { (box, label) ->
             EditTextPreference(screen.context).apply {
@@ -775,6 +822,25 @@ abstract class EHentai(
     private fun defaultTagsPrefKey(box: String) = "${DEFAULT_TAGS_PREF_KEY}_${box}_$lang"
 
     private fun savedDefault(box: String): String = preferences.getString(defaultTagsPrefKey(box), "").orEmpty().trim()
+
+    // The app builds the filter sheet once per visit. A box still holding the default it was built
+    // with, when the saved default has since changed, is out of date: use the current default.
+    // A box the user edited is always kept as typed.
+    private fun currentInput(builtWith: String, state: String, saved: String): String = if (state == builtWith && builtWith != saved) saved else state
+
+    private fun defaultCategoriesPrefKey() = "${DEFAULT_CATEGORIES_PREF_KEY}_$lang"
+
+    private fun savedCategories(): Set<String> = preferences.getStringSet(defaultCategoriesPrefKey(), emptySet()).orEmpty()
+
+    private fun categoriesSummary(ids: Set<String>): String = GENRES.filter { it.second in ids }.joinToString { it.first }.ifEmpty { "All" }
+
+    // E-Hentai's f_cats is a bitmask of the categories to hide; empty when no default is saved.
+    private fun savedCategoriesParam(): String {
+        val keep = savedCategories()
+        if (keep.isEmpty()) return ""
+        val hidden = CATEGORY_BITS.filterKeys { it !in keep }.values.sum()
+        return "&f_cats=$hidden"
+    }
 
     // All saved defaults as fully-qualified search tokens, qualified exactly like the filter boxes do.
     private fun savedDefaultTags(): List<String> = (
