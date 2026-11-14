@@ -202,36 +202,23 @@ abstract class EHentai(
             }
         val typedTags =
             (
-                filters.filterIsInstance<NamespaceTagFilter>().flatMap { it.qualifiedTags(currentInput(it.builtWith, it.state, savedDefault(it.namespace))) } +
-                    filters.filterIsInstance<OtherTagFilter>().flatMap { it.qualifiedTags(currentInput(it.builtWith, it.state, savedDefault("other"))) }
+                filters.filterIsInstance<NamespaceTagFilter>().flatMap { it.qualifiedTags() } +
+                    filters.filterIsInstance<OtherTagFilter>().flatMap { it.qualifiedTags() }
                 ).distinct()
         // Remember how often each tag is searched so frequent ones are proposed first next time.
-        // Pre-filled saved defaults are left out so they don't crowd the ranking.
-        recordTagUsage(typedTags - savedDefaultTags().toSet())
-        modifiedQuery = (listOf(modifiedQuery) + typedTags).filter { it.isNotBlank() }.joinToString(",")
+        recordTagUsage(typedTags)
+        modifiedQuery = (listOf(modifiedQuery) + withSavedDefaults(typedTags)).filter { it.isNotBlank() }.joinToString(",")
         uri.appendQueryParameter("f_search", modifiedQuery)
-        // when attempting to search with no genres selected, will auto select all genres
-        filters.filterIsInstance<GenreGroup>().firstOrNull()?.let { group ->
-            // A sheet built before the saved categories changed, left untouched, takes the new ones.
-            val selected = group.state.filter { it.state }.map { it.genreId }.toSet()
-            val saved = savedCategories()
-            if (selected == group.builtWith && saved != group.builtWith) {
-                group.state.forEach { it.state = it.genreId in saved }
-            }
-        }
-        filters.filterIsInstance<GenreGroup>().firstOrNull()?.state?.let {
-            // variable to to check is any genres are selected
-            val check = it.any { option -> option.state } // or it.any(GenreOption::state)
-            // if no genres are selected by the user set all genres to on
-            if (!check) {
-                for (i in it) {
-                    i.state = true
-                }
-            }
-        }
+
+        // Categories: those ticked in the sheet win; otherwise the saved defaults; otherwise all.
+        // Computed without touching the sheet, so it keeps showing only what the user ticked.
+        val ticked = filters.filterIsInstance<GenreGroup>().firstOrNull()?.state.orEmpty()
+            .filter { it.state }.map { it.genreId }.toSet()
+        val categories = ticked.ifEmpty { savedCategories() }.ifEmpty { GENRES.map { it.second }.toSet() }
+        GENRES.forEach { (_, id) -> uri.appendQueryParameter("f_$id", if (id in categories) "1" else "0") }
 
         filters.forEach {
-            if (it is UriFilter) it.addToUri(uri)
+            if (it is UriFilter && it !is GenreGroup) it.addToUri(uri)
         }
 
         if (uri.toString().contains("f_spf") || uri.toString().contains("f_spt")) {
@@ -502,12 +489,12 @@ abstract class EHentai(
     override fun getFilterList() = FilterList(
         EnforceLanguageFilter(getEnforceLanguagePref()),
         Watched(),
-        GenreGroup(savedCategories()),
+        GenreGroup(),
         Filter.Header("Tags — separate with , or ;  ·  prefix - to exclude"),
-        FemaleTagFilter(namespaceSuggestions("female"), savedDefault("female")),
-        MaleTagFilter(namespaceSuggestions("male"), savedDefault("male")),
-        MixedTagFilter(namespaceSuggestions("mixed"), savedDefault("mixed")),
-        OtherTagFilter(otherSuggestions(), savedDefault("other")),
+        FemaleTagFilter(namespaceSuggestions("female")),
+        MaleTagFilter(namespaceSuggestions("male")),
+        MixedTagFilter(namespaceSuggestions("mixed")),
+        OtherTagFilter(otherSuggestions()),
         AdvancedGroup(),
     )
 
@@ -544,9 +531,6 @@ abstract class EHentai(
         state = state,
         suggestions = suggestions,
     ) {
-        // The saved default this box was pre-filled with, to spot a sheet built before it changed.
-        val builtWith = state
-
         // Turn the bare input into fully-qualified "namespace:tag" tokens, preserving "-" exclusions.
         fun qualifiedTags(input: String = state): List<String> = input
             .split(',', ';')
@@ -580,8 +564,6 @@ abstract class EHentai(
         state = state,
         suggestions = suggestions,
     ) {
-        val builtWith = state
-
         fun qualifiedTags(input: String = state): List<String> = input
             .split(',', ';')
             .map { it.trim() }
@@ -610,10 +592,10 @@ abstract class EHentai(
         }
     }
 
-    class GenreGroup(val builtWith: Set<String> = emptySet()) :
+    class GenreGroup :
         UriGroup<GenreOption>(
             "Genres",
-            GENRES.map { (name, id) -> GenreOption(name, id, id in builtWith) },
+            GENRES.map { (name, id) -> GenreOption(name, id) },
         )
 
     class AdvancedOption(
@@ -802,7 +784,7 @@ abstract class EHentai(
                 key = defaultTagsPrefKey(box)
                 title = "Default $label tags"
                 dialogTitle = "Default $label tags"
-                dialogMessage = "Pre-filled in the $label tags box and applied to Popular and Latest. " +
+                dialogMessage = "Always added to searches, Popular and Latest, without showing in the filter sheet. " +
                     "Separate with , or ;  ·  prefix - to exclude" +
                     if (box == "other") " (use full prefixes, e.g. -yaoi, parody:naruto)." else " (e.g. ahegao; -guro)."
                 summary = savedDefault(box).ifBlank { "None" }
@@ -816,17 +798,21 @@ abstract class EHentai(
     }
 
     // region Saved default tags
-    // Per-box tags the user always wants (e.g. Other "-yaoi", Female "ahegao"). They pre-fill the
-    // filter boxes, so they show and can be removed for one search, and also filter Popular/Latest.
+    // Per-box tags the user always wants (e.g. Other "-yaoi", Female "ahegao"). They are added to
+    // every search, Popular and Latest behind the scenes; the filter sheet only holds extra tags.
 
     private fun defaultTagsPrefKey(box: String) = "${DEFAULT_TAGS_PREF_KEY}_${box}_$lang"
 
     private fun savedDefault(box: String): String = preferences.getString(defaultTagsPrefKey(box), "").orEmpty().trim()
 
-    // The app builds the filter sheet once per visit. A box still holding the default it was built
-    // with, when the saved default has since changed, is out of date: use the current default.
-    // A box the user edited is always kept as typed.
-    private fun currentInput(builtWith: String, state: String, saved: String): String = if (state == builtWith && builtWith != saved) saved else state
+    // Saved defaults are added to every search without showing in the filter sheet. A tag the
+    // user typed overrides a saved one on the same tag: typing "futanari" while "-futanari" is
+    // saved searches for it instead of asking for both (which would return nothing).
+    private fun withSavedDefaults(typed: List<String>): List<String> {
+        fun bare(tag: String) = tag.removePrefix("-").trim().lowercase()
+        val typedBare = typed.map(::bare).toSet()
+        return (savedDefaultTags().filterNot { bare(it) in typedBare } + typed).distinct()
+    }
 
     private fun defaultCategoriesPrefKey() = "${DEFAULT_CATEGORIES_PREF_KEY}_$lang"
 
